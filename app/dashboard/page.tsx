@@ -1220,19 +1220,42 @@ export default function DashboardPage() {
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg shadow-md">
+        <div 
+          className="bg-white p-4 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-all duration-200 hover:bg-gray-50"
+          onClick={() => {
+            // Clear all filters to show all leads
+            setActiveFilters({});
+            setSearchTerm('');
+            // Scroll to the table
+            setTimeout(() => {
+              const tableElement = document.querySelector('[data-lead-table]');
+              if (tableElement) {
+                tableElement.scrollIntoView({ behavior: 'smooth' });
+              }
+            }, 100);
+          }}
+        >
           <h3 className="text-lg font-semibold text-gray-700">Total Leads</h3>
           <p className="text-3xl font-bold text-blue-600">{totalLeads}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow-md">
+        <div 
+          className="bg-white p-4 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-all duration-200 hover:bg-gray-50"
+          onClick={() => router.push('/due-today')}
+        >
           <h3 className="text-lg font-semibold text-gray-700">Due Today</h3>
           <p className="text-3xl font-bold text-yellow-600">{dueToday}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow-md">
+        <div 
+          className="bg-white p-4 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-all duration-200 hover:bg-gray-50"
+          onClick={() => router.push('/upcoming')}
+        >
           <h3 className="text-lg font-semibold text-gray-700">Upcoming (7 Days)</h3>
           <p className="text-3xl font-bold text-green-600">{upcoming}</p>
         </div>
-        <div className="bg-white p-4 rounded-lg shadow-md">
+        <div 
+          className="bg-white p-4 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-all duration-200 hover:bg-gray-50"
+          onClick={() => router.push('/due-today?tab=overdue')}
+        >
           <h3 className="text-lg font-semibold text-gray-700">Overdue</h3>
           <p className="text-3xl font-bold text-red-600">{overdue}</p>
         </div>
@@ -1246,15 +1269,17 @@ export default function DashboardPage() {
       </div>
       
       {/* Lead Table */}
-      <LeadTable 
-        filters={activeFilters} 
-        onLeadClick={handleLeadClick}
-        selectedLeads={selectedLeads}
-        onLeadSelection={handleLeadSelection}
-        selectAll={selectAll}
-        onSelectAll={handleSelectAll}
-        key={leads.length}
-      />
+      <div data-lead-table>
+        <LeadTable 
+          filters={activeFilters} 
+          onLeadClick={handleLeadClick}
+          selectedLeads={selectedLeads}
+          onLeadSelection={handleLeadSelection}
+          selectAll={selectAll}
+          onSelectAll={handleSelectAll}
+          key={leads.length}
+        />
+      </div>
 
       {/* Lead Detail Modal */}
       {showLeadModal && selectedLead && (
