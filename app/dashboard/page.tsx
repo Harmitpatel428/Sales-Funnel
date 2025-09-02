@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useLeads, Lead, LeadFilters } from '../context/LeadContext';
+import { useLeads, Lead, LeadFilters, MobileNumber } from '../context/LeadContext';
 import LeadTable from '../components/LeadTable';
 import { useRouter } from 'next/navigation';
 
@@ -532,7 +532,7 @@ export default function DashboardPage() {
   };
 
   // Parse multiple mobile numbers from a single field
-  const parseMobileNumbers = (mobileNumberString: string) => {
+  const parseMobileNumbers = (mobileNumberString: string, clientName: string = '') => {
     console.log('*** PARSING MOBILE NUMBERS ***');
     console.log('Input string: "' + mobileNumberString + '" (type: ' + typeof mobileNumberString + ')');
     
@@ -569,11 +569,11 @@ export default function DashboardPage() {
 
     console.log('Filtered numbers:', numbers);
 
-    // Create mobile numbers array
+    // Create mobile numbers array with auto-populated contact name ONLY for the first number
     const mobileNumbers = [
-      { id: '1', number: numbers[0] || '', isMain: true },
-      { id: '2', number: numbers[1] || '', isMain: false },
-      { id: '3', number: numbers[2] || '', isMain: false }
+      { id: '1', number: numbers[0] || '', name: numbers[0] ? clientName : '', isMain: true },
+      { id: '2', number: numbers[1] || '', name: '', isMain: false },
+      { id: '3', number: numbers[2] || '', name: '', isMain: false }
     ];
 
     console.log('Final mobile numbers array:', mobileNumbers);
@@ -601,7 +601,7 @@ export default function DashboardPage() {
       company: lead.company || '',
       clientName: lead.clientName || '',
       mobileNumber: lead.mobileNumber || '', // Keep actual phone numbers, only set empty if truly missing
-      mobileNumbers: lead.mobileNumbers || [{ id: '1', number: lead.mobileNumber || '', isMain: true }],
+      mobileNumbers: lead.mobileNumbers || [{ id: '1', number: lead.mobileNumber || '', name: '', isMain: true }],
       companyLocation: lead.companyLocation || address,
       unitType: lead.unitType || 'New',
       status: lead.status || 'New',
@@ -642,7 +642,7 @@ export default function DashboardPage() {
         console.log('leadData.consumerNumber: "' + leadData.consumerNumber + '" (type: ' + typeof leadData.consumerNumber + ')');
         
         // Parse mobile numbers from the imported data (handles multiple numbers in one field)
-        const mobileNumbers = parseMobileNumbers(leadData.mobileNumber || '');
+        const mobileNumbers = parseMobileNumbers(leadData.mobileNumber || '', leadData.clientName || '');
 
         const newLead: Lead = {
           id: crypto.randomUUID(),
@@ -652,7 +652,7 @@ export default function DashboardPage() {
           company: leadData.company || '',
           clientName: leadData.clientName || '',
           mobileNumber: mobileNumbers[0]?.number || '', // Keep for backward compatibility
-          mobileNumbers: mobileNumbers,
+          mobileNumbers: mobileNumbers as MobileNumber[],
           companyLocation: leadData.companyLocation || '',
           unitType: leadData.unitType || 'New',
           status: leadData.status || 'New',
@@ -770,6 +770,12 @@ export default function DashboardPage() {
         mobileNumber?.replace(/[^0-9]/g, '').includes(queryNumbers)
       );
       
+      // Search in Mobile Number Names (including client name fallback only for main number)
+      const allMobileNames = (lead.mobileNumbers || []).map(m => m.name || (m.isMain ? lead.clientName : '')).filter(Boolean);
+      const mobileNameMatch = allMobileNames.some(mobileName => 
+        mobileName?.toLowerCase().includes(queryLower)
+      );
+      
       // Search in Company Name
       const companyMatch = lead.company.toLowerCase().includes(queryLower);
       
@@ -782,7 +788,7 @@ export default function DashboardPage() {
       // Search in Connection Date
       const dateMatch = lead.connectionDate.toLowerCase().includes(queryLower);
       
-      return kvaMatch || consumerMatch || mobileMatch || companyMatch || locationMatch || clientMatch || dateMatch;
+      return kvaMatch || consumerMatch || mobileMatch || mobileNameMatch || companyMatch || locationMatch || clientMatch || dateMatch;
     }).slice(0, 8); // Show more suggestions
 
     setSearchSuggestions(suggestions);
@@ -812,6 +818,9 @@ export default function DashboardPage() {
       ...(lead.mobileNumbers || []).map(m => m.number)
     ].filter(Boolean);
     
+    // Get all mobile names for this lead (including client name fallback only for main number)
+    const allMobileNames = (lead.mobileNumbers || []).map(m => m.name || (m.isMain ? lead.clientName : '')).filter(Boolean);
+    
     let searchValue = lead.kva; // Default to KVA
     
     if (lead.consumerNumber.toLowerCase().includes(queryLower) || lead.consumerNumber.replace(/[^0-9]/g, '').includes(queryNumbers)) {
@@ -823,6 +832,14 @@ export default function DashboardPage() {
       // Show the main mobile number or the first one found
       const mainMobile = lead.mobileNumbers?.find(m => m.isMain)?.number || lead.mobileNumber || allMobileNumbers[0];
       searchValue = mainMobile || '';
+    } else if (allMobileNames.some((mobileName: string) => 
+      mobileName?.toLowerCase().includes(queryLower)
+    )) {
+      // Show the mobile name that matched (including client name fallback only for main number)
+      const matchedMobile = lead.mobileNumbers?.find(m => 
+        (m.name || (m.isMain ? lead.clientName : ''))?.toLowerCase().includes(queryLower)
+      );
+      searchValue = matchedMobile?.name || (matchedMobile?.isMain ? lead.clientName : '') || '';
     } else if (lead.company.toLowerCase().includes(queryLower)) {
       searchValue = lead.company;
     } else if (lead.companyLocation?.toLowerCase().includes(queryLower)) {
@@ -940,9 +957,9 @@ export default function DashboardPage() {
                 clientName: 'Test Client',
                 mobileNumber: '987-654-3210', // Keep for backward compatibility
                 mobileNumbers: [
-                  { id: '1', number: '987-654-3210', isMain: true },
-                  { id: '2', number: '', isMain: false },
-                  { id: '3', number: '', isMain: false }
+                  { id: '1', number: '987-654-3210', name: 'Test Contact', isMain: true },
+                  { id: '2', number: '', name: '', isMain: false },
+                  { id: '3', number: '', name: '', isMain: false }
                 ],
                 companyLocation: 'Test Address',
                 unitType: 'New',
@@ -990,7 +1007,7 @@ export default function DashboardPage() {
             <div className="flex-1 relative">
               <input
                 type="text"
-                placeholder="Search by KVA, Phone, Consumer No., Company, Client Name, or Date"
+                placeholder="Search by KVA, Phone, Contact Name, Consumer No., Company, Client Name, or Date"
                 value={searchTerm}
                 onChange={handleSearchInputChange}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
@@ -1005,6 +1022,7 @@ export default function DashboardPage() {
                   <div className="text-xs text-blue-800">
                     <div className="font-medium mb-1">Search examples:</div>
                     <div>• Phone: 9876543210</div>
+                    <div>• Contact: John Doe</div>
                     <div>• Company: Evaan Metal</div>
                     <div>• Consumer No: 66481</div>
                     <div>• Client: Vikram</div>
@@ -1035,6 +1053,12 @@ export default function DashboardPage() {
                         mobileNumber?.replace(/[^0-9]/g, '').includes(queryNumbers)
                       )) return 'Phone';
                       
+                      // Check mobile number names (including client name fallback only for main number)
+                      const allMobileNames = (lead.mobileNumbers || []).map(m => m.name || (m.isMain ? lead.clientName : '')).filter(Boolean);
+                      if (allMobileNames.some(mobileName => 
+                        mobileName?.toLowerCase().includes(queryLower)
+                      )) return 'Contact';
+                      
                       if (lead.company.toLowerCase().includes(queryLower)) return 'Company';
                       if (lead.companyLocation?.toLowerCase().includes(queryLower)) return 'Address';
                       if (lead.clientName.toLowerCase().includes(queryLower)) return 'Client';
@@ -1055,7 +1079,14 @@ export default function DashboardPage() {
                             <div className="font-medium text-gray-900">{lead.kva}</div>
                             <div className="text-sm text-gray-600">{lead.company}</div>
                             <div className="text-xs text-gray-500 mt-1">
-                              {lead.clientName} • {(lead.mobileNumbers?.find(m => m.isMain)?.number || lead.mobileNumber)?.replace(/-/g, '')} • {lead.consumerNumber}
+                              {lead.clientName} • {(() => {
+                                const mainMobile = lead.mobileNumbers?.find(m => m.isMain);
+                                if (mainMobile) {
+                                  const contactName = mainMobile.name || (mainMobile.isMain ? lead.clientName : '');
+                                  return contactName ? `${contactName} - ${mainMobile.number?.replace(/-/g, '')}` : mainMobile.number?.replace(/-/g, '');
+                                }
+                                return lead.mobileNumber?.replace(/-/g, '');
+                              })()} • {lead.consumerNumber}
                               {lead.companyLocation && <span> • {lead.companyLocation}</span>}
                             </div>
                           </div>
@@ -1286,26 +1317,46 @@ export default function DashboardPage() {
                         <p className="text-base text-gray-800">{selectedLead.clientName || 'Not provided'}</p>
                       </div>
                       <div>
-                        <label className="block text-base font-medium text-gray-600">Mobile Number</label>
-                        <p className="text-base text-gray-800">
-                          {(selectedLead.mobileNumbers?.find(m => m.isMain)?.number || selectedLead.mobileNumber)?.replace(/-/g, '') || 'Not provided'}
-                        </p>
-                        {selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 1 && (
-                          <div className="mt-2">
-                            <p className="text-sm text-gray-600 mb-1">All Numbers:</p>
-                            <div className="space-y-1">
-                              {selectedLead.mobileNumbers.map((mobile) => (
-                                <div key={mobile.id} className="flex items-center space-x-2">
-                                  <span className="text-sm text-gray-800">{mobile.number?.replace(/-/g, '')}</span>
-                                  {mobile.isMain && (
-                                    <span className="inline-flex px-2 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
-                                      Main
-                                    </span>
-                                  )}
-                      </div>
-                              ))}
-                            </div>
+                        <label className="block text-base font-medium text-gray-600">Mobile Numbers</label>
+                        {selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0 ? (
+                          <div className="space-y-0.5">
+                            {selectedLead.mobileNumbers.map((mobile) => (
+                              <div key={mobile.id} className="flex items-center bg-gray-50 rounded p-1">
+                                <div className="flex-1">
+                                  {/* Show contact name section only if there's a name to show */}
+                                  {(() => {
+                                    // Determine what name to show
+                                    let displayName = '';
+                                    if (mobile.name) {
+                                      displayName = mobile.name;
+                                    } else if (selectedLead.mobileNumbers && selectedLead.mobileNumbers[0] === mobile && selectedLead.clientName) {
+                                      // Only show client name for the first mobile number (index 0)
+                                      displayName = selectedLead.clientName;
+                                    }
+                                    
+                                    // Only show the name section if there's a name to display
+                                    return displayName ? (
+                                      <div className="flex items-center gap-3">
+                                        <span className="text-sm font-medium text-gray-900">
+                                          {displayName}
+                                        </span>
+                                        {mobile.isMain && (
+                                          <span className="inline-flex px-1.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
+                                            Main
+                                          </span>
+                                        )}
+                                      </div>
+                                    ) : null;
+                                  })()}
+                                  <div className="text-sm text-gray-600">{mobile.number?.replace(/-/g, '') || ''}</div>
+                                </div>
+                              </div>
+                            ))}
                           </div>
+                        ) : (
+                          <p className="text-base text-gray-800">
+                            {selectedLead.mobileNumber?.replace(/-/g, '') || ''}
+                          </p>
                         )}
                       </div>
                     </div>
@@ -1433,10 +1484,12 @@ export default function DashboardPage() {
                       if (validNumbers.length > 0) {
                         validNumbers.forEach((mobile) => {
                           const cleanNumber = mobile.number.replace(/[^0-9]/g, '');
+                          const contactName = mobile.name || (mobile.isMain ? selectedLead.clientName : '');
+                          const contactInfo = contactName ? `${contactName} - ${cleanNumber}` : cleanNumber;
                           if (mobile.isMain) {
-                            info += `Contacts - ${cleanNumber} - Main\n`;
+                            info += `Contacts - ${contactInfo} - Main\n`;
                           } else {
-                            info += `Contacts - ${cleanNumber}\n`;
+                            info += `Contacts - ${contactInfo}\n`;
                           }
                         });
                       }

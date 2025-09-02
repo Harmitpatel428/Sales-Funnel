@@ -7,7 +7,7 @@ export default function HomePage() {
   const router = useRouter();
 
   const handleGetStarted = () => {
-    router.push('/add-lead');
+    router.push('/add-lead?from=home');
   };
 
   const handleViewDashboard = () => {
@@ -122,7 +122,7 @@ export default function HomePage() {
           <h2 className="text-2xl font-bold text-white mb-6 text-center">Quick Actions</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <button
-              onClick={() => router.push('/add-lead')}
+              onClick={() => router.push('/add-lead?from=home')}
               className="p-4 bg-purple-50 hover:bg-purple-100 rounded-lg border border-purple-200 transition-colors duration-200"
             >
               <div className="text-purple-600 font-semibold">➕ Add Lead</div>

@@ -5,6 +5,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 export interface MobileNumber {
   id: string;
   number: string;
+  name: string;
   isMain: boolean;
 }
 
@@ -206,10 +207,13 @@ export function LeadProvider({ children }: { children: ReactNode }) {
           ...(lead.mobileNumbers || []).map(m => m.number)
         ].filter(Boolean);
         
+        const allMobileNames = (lead.mobileNumbers || []).map(m => m.name).filter(Boolean);
+        
         const searchableFields = [
           lead.clientName,
           lead.company,
           ...allMobileNumbers,
+          ...allMobileNames,
           lead.consumerNumber,
           lead.kva,
           lead.companyLocation,

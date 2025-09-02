@@ -8,6 +8,9 @@ export default function AddLeadPage() {
   const router = useRouter();
   const { addLead, updateLead } = useLeads();
   
+  // Track where the user came from
+  const [cameFromHome, setCameFromHome] = useState(false);
+  
   const [formData, setFormData] = useState({
     kva: '',
     connectionDate: '',
@@ -16,9 +19,9 @@ export default function AddLeadPage() {
     clientName: '',
     mobileNumber: '', // Keep for backward compatibility
     mobileNumbers: [
-      { id: '1', number: '', isMain: true },
-      { id: '2', number: '', isMain: false },
-      { id: '3', number: '', isMain: false }
+      { id: '1', number: '', name: '', isMain: true },
+      { id: '2', number: '', name: '', isMain: false },
+      { id: '3', number: '', name: '', isMain: false }
     ] as MobileNumber[],
     companyLocation: '',
     unitType: 'New' as Lead['unitType'],
@@ -59,6 +62,12 @@ export default function AddLeadPage() {
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const mode = searchParams.get('mode');
+    const from = searchParams.get('from');
+    
+    // Check if user came from home page
+    if (from === 'home') {
+      setCameFromHome(true);
+    }
     
     if (mode === 'edit') {
       const storedLead = localStorage.getItem('editingLead');
@@ -72,21 +81,22 @@ export default function AddLeadPage() {
           
           // Handle mobile numbers - convert old format to new format if needed
           let mobileNumbers: MobileNumber[] = [
-            { id: '1', number: '', isMain: true },
-            { id: '2', number: '', isMain: false },
-            { id: '3', number: '', isMain: false }
+            { id: '1', number: '', name: '', isMain: true },
+            { id: '2', number: '', name: '', isMain: false },
+            { id: '3', number: '', name: '', isMain: false }
           ];
           
           if (leadData.mobileNumbers && Array.isArray(leadData.mobileNumbers)) {
             // New format - use existing mobile numbers
-            mobileNumbers = leadData.mobileNumbers.map((mobile: { id?: string; number?: string; isMain?: boolean }, index: number) => ({
+            mobileNumbers = leadData.mobileNumbers.map((mobile: { id?: string; number?: string; name?: string; isMain?: boolean }, index: number) => ({
               id: mobile.id || String(index + 1),
               number: mobile.number || '',
+              name: mobile.name || '',
               isMain: mobile.isMain || false
             }));
           } else if (leadData.mobileNumber) {
             // Old format - convert to new format
-            mobileNumbers[0] = { id: '1', number: leadData.mobileNumber, isMain: true };
+            mobileNumbers[0] = { id: '1', number: leadData.mobileNumber, name: '', isMain: true };
           }
           
           setFormData({
@@ -196,6 +206,18 @@ export default function AddLeadPage() {
     }
   };
 
+  // Handle mobile number name changes
+  const handleMobileNameChange = (index: number, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      mobileNumbers: prev.mobileNumbers.map((mobile, i) => 
+        i === index ? { ...mobile, name: value } : mobile
+      )
+    }));
+  };
+
+
+
   // Handle main mobile number selection
   const handleMainMobileNumberChange = (index: number) => {
     setFormData(prev => ({
@@ -291,14 +313,24 @@ export default function AddLeadPage() {
         // Clear stored editing data
         localStorage.removeItem('editingLead');
         
-        // Navigate back to dashboard
-        router.push('/dashboard');
+        // Navigate back to appropriate page
+        router.push(cameFromHome ? '/' : '/dashboard');
       } else {
         // Add new lead
         const leadId = generateId();
         
+        // Auto-populate contact name ONLY for the first mobile number (index 0) if no contact name is provided
+        const updatedMobileNumbers = formData.mobileNumbers.map((mobile, index) => {
+          // ONLY apply to the first mobile number (index 0) - regardless of isMain status
+          if (index === 0 && mobile.number && mobile.number.trim() !== '' && !mobile.name && formData.clientName) {
+            return { ...mobile, name: formData.clientName };
+          }
+          // For all other mobile numbers (index 1, 2, etc.), keep them exactly as they are
+          return mobile;
+        });
+        
         // Get main mobile number for backward compatibility
-        const mainMobileNumber = formData.mobileNumbers.find(mobile => mobile.isMain)?.number || formData.mobileNumbers[0]?.number || '';
+        const mainMobileNumber = updatedMobileNumbers.find(mobile => mobile.isMain)?.number || updatedMobileNumbers[0]?.number || '';
         
         const newLead: Lead = {
           id: leadId,
@@ -308,7 +340,7 @@ export default function AddLeadPage() {
           company: formData.company,
           clientName: formData.clientName,
           mobileNumber: mainMobileNumber, // Keep for backward compatibility
-          mobileNumbers: formData.mobileNumbers,
+          mobileNumbers: updatedMobileNumbers,
           companyLocation: formData.companyLocation,
           unitType: formData.unitType,
           status: formData.status,
@@ -341,9 +373,9 @@ export default function AddLeadPage() {
           clientName: '',
           mobileNumber: '', // Keep for backward compatibility
           mobileNumbers: [
-            { id: '1', number: '', isMain: true },
-            { id: '2', number: '', isMain: false },
-            { id: '3', number: '', isMain: false }
+            { id: '1', number: '', name: '', isMain: true },
+            { id: '2', number: '', name: '', isMain: false },
+            { id: '3', number: '', name: '', isMain: false }
           ],
           companyLocation: '',
           unitType: 'New',
@@ -354,8 +386,8 @@ export default function AddLeadPage() {
           notes: '',
         });
         
-        // Navigate back to dashboard
-        router.push('/dashboard');
+        // Navigate back to appropriate page
+        router.push(cameFromHome ? '/' : '/dashboard');
       }
       
     } catch (error) {
@@ -371,7 +403,8 @@ export default function AddLeadPage() {
     if (isEditMode) {
       localStorage.removeItem('editingLead');
     }
-    router.push('/dashboard');
+    // Navigate back to appropriate page
+    router.push(cameFromHome ? '/' : '/dashboard');
   };
 
   // Show loading state during hydration
@@ -547,48 +580,60 @@ export default function AddLeadPage() {
               </label>
               <div className="space-y-3">
                 {formData.mobileNumbers.map((mobile, index) => (
-                  <div key={mobile.id} className="flex items-center space-x-3">
-                    <div className="flex-1">
-                      <input
-                        type="tel"
-                        value={mobile.number}
-                        onChange={(e) => handleMobileNumberChange(index, e.target.value)}
-                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200 text-black ${
-                          errors[`mobileNumber_${index}` as keyof typeof formData] ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                        }`}
-                        placeholder={`Mobile Number ${index + 1}`}
-                        disabled={isSubmitting}
-                      />
-                      {errors[`mobileNumber_${index}` as keyof typeof formData] && (
-                        <p className="text-sm text-red-600 flex items-center mt-1">
-                          <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                          {errors[`mobileNumber_${index}` as keyof typeof formData]}
-                        </p>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleMainMobileNumberChange(index)}
-                      disabled={isSubmitting}
-                      className={`flex items-center space-x-2 px-4 py-3 rounded-lg border-2 transition-all duration-200 ${
-                        mobile.isMain
-                          ? 'border-purple-500 bg-purple-50 text-purple-700'
-                          : 'border-gray-300 bg-white text-gray-600 hover:border-purple-300 hover:bg-purple-25'
-                      }`}
-                    >
-                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                        mobile.isMain ? 'border-purple-500 bg-purple-500' : 'border-gray-400'
-                      }`}>
-                        {mobile.isMain && (
-                          <div className="w-2 h-2 rounded-full bg-white"></div>
-                        )}
+                  <div key={mobile.id} className="space-y-2">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex-1">
+                        <input
+                          type="text"
+                          value={mobile.name}
+                          onChange={(e) => handleMobileNameChange(index, e.target.value)}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200 text-black"
+                          placeholder={`Contact Name ${index + 1} (Optional)`}
+                          disabled={isSubmitting}
+                        />
                       </div>
-                      <span className="text-sm font-medium">
-                        {mobile.isMain ? 'Main' : 'Set as Main'}
-                      </span>
-                    </button>
+                      <div className="flex-1">
+                        <input
+                          type="tel"
+                          value={mobile.number}
+                          onChange={(e) => handleMobileNumberChange(index, e.target.value)}
+                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200 text-black ${
+                            errors[`mobileNumber_${index}` as keyof typeof formData] ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                          }`}
+                          placeholder={`Mobile Number ${index + 1}`}
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleMainMobileNumberChange(index)}
+                        disabled={isSubmitting}
+                        className={`flex items-center space-x-2 px-4 py-3 rounded-lg border-2 transition-all duration-200 ${
+                          mobile.isMain
+                            ? 'border-purple-500 bg-purple-50 text-purple-700'
+                            : 'border-gray-300 bg-white text-gray-600 hover:border-purple-300 hover:bg-purple-25'
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                          mobile.isMain ? 'border-purple-500 bg-purple-500' : 'border-gray-400'
+                        }`}>
+                          {mobile.isMain && (
+                            <div className="w-2 h-2 rounded-full bg-white"></div>
+                          )}
+                        </div>
+                        <span className="text-sm font-medium">
+                          {mobile.isMain ? 'Main' : 'Set as Main'}
+                        </span>
+                      </button>
+                    </div>
+                    {errors[`mobileNumber_${index}` as keyof typeof formData] && (
+                      <p className="text-sm text-red-600 flex items-center">
+                        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        {errors[`mobileNumber_${index}` as keyof typeof formData]}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
