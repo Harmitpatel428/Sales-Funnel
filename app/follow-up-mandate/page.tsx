@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useLeads, Lead } from '../context/LeadContext';
+import { useState } from 'react';
+import { useLeads } from '../context/LeadContext';
 import { useRouter } from 'next/navigation';
 
 export default function FollowUpMandatePage() {
@@ -114,9 +114,9 @@ export default function FollowUpMandatePage() {
                     <div key={lead.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
-                          <h3 className="font-semibold text-gray-800">{lead.name}</h3>
+                          <h3 className="font-semibold text-gray-800">{lead.clientName}</h3>
                           <p className="text-sm text-gray-600">{lead.company}</p>
-                          <p className="text-sm text-gray-500">{lead.email}</p>
+                          <p className="text-sm text-gray-500">{lead.mobileNumber || 'N/A'}</p>
                         </div>
                         <div className="flex items-center space-x-3">
                           <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
@@ -155,9 +155,9 @@ export default function FollowUpMandatePage() {
                     <div key={lead.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
-                          <h3 className="font-semibold text-gray-800">{lead.name}</h3>
+                          <h3 className="font-semibold text-gray-800">{lead.clientName}</h3>
                           <p className="text-sm text-gray-600">{lead.company}</p>
-                          <p className="text-sm text-gray-500">{lead.email}</p>
+                          <p className="text-sm text-gray-500">{lead.mobileNumber || 'N/A'}</p>
                         </div>
                         <div className="flex items-center space-x-3">
                           <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">

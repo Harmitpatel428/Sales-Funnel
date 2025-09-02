@@ -4,6 +4,7 @@ import "./globals.css";
 import Navigation from "./components/Navigation";
 import { LeadProvider } from "./context/LeadContext";
 
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -35,6 +36,7 @@ export default function RootLayout({
             <main className="flex-1 overflow-y-auto p-6">
               {children}
             </main>
+            
           </div>
         </LeadProvider>
       </body>

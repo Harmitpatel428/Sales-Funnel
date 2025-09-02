@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useLeads, Lead } from '../context/LeadContext';
+import { useLeads } from '../context/LeadContext';
 import { useRouter } from 'next/navigation';
 
 export default function ReminderSystem() {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, memo, useCallback } from 'react';
 import { useLeads, Lead, LeadFilters } from '../context/LeadContext';
 
 type SortField = keyof Lead | '';
@@ -15,7 +15,7 @@ interface LeadTableProps {
   onSelectAll?: (checked: boolean) => void;
 }
 
-export default function LeadTable({ 
+const LeadTable = memo(function LeadTable({ 
   filters = {}, 
   onLeadClick, 
   selectedLeads = new Set(), 
@@ -23,7 +23,7 @@ export default function LeadTable({
   selectAll = false, 
   onSelectAll 
 }: LeadTableProps) {
-  const { leads, getFilteredLeads, deleteLead } = useLeads();
+  const { leads, getFilteredLeads } = useLeads();
   const [sortField, setSortField] = useState<SortField>('');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
@@ -35,7 +35,7 @@ export default function LeadTable({
   
   // Close dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = () => {
       if (dropdownOpen) {
         setDropdownOpen(null);
       }
@@ -78,7 +78,7 @@ export default function LeadTable({
   console.log('LeadTable - sorted leads:', sortedLeads);
   
   // Handle column header click for sorting
-  const handleSort = (field: SortField) => {
+  const handleSort = useCallback((field: SortField) => {
     if (sortField === field) {
       // Toggle direction if clicking the same field
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -87,27 +87,29 @@ export default function LeadTable({
       setSortField(field);
       setSortDirection('asc');
     }
-  };
+  }, [sortField, sortDirection]);
   
   // Render sort indicator
-  const renderSortIndicator = (field: SortField) => {
+  const renderSortIndicator = useCallback((field: SortField) => {
     if (sortField !== field) return null;
     return sortDirection === 'asc' ? ' ↑' : ' ↓';
-  };
+  }, [sortField, sortDirection]);
   
   // Format date for display
-  const formatDate = (dateString: string) => {
+  const formatDate = useCallback((dateString: string) => {
     if (!dateString) return '';
     
     // Handle DD-MM-YYYY format
     if (dateString.match(/^\d{2}-\d{2}-\d{4}$/)) {
       const [day, month, year] = dateString.split('-');
-      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
+      if (day && month && year) {
+        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        return date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+      }
     }
     
     // Handle other formats
@@ -119,10 +121,10 @@ export default function LeadTable({
       month: 'short',
       day: 'numeric'
     });
-  };
+  }, []);
   
   // Get status color
-  const getStatusColor = (status: Lead['status']) => {
+  const getStatusColor = useCallback((status: Lead['status']) => {
     switch (status) {
       case 'New': return 'bg-blue-100 text-blue-800';
       case 'Contacted': return 'bg-purple-100 text-purple-800';
@@ -132,13 +134,9 @@ export default function LeadTable({
       case 'Closed - Lost': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
-  };
+  }, []);
 
-  // Handle lead deletion
-  const handleDeleteLead = (e: React.MouseEvent, leadId: string) => {
-    e.stopPropagation(); // Prevent row click
-    deleteLead(leadId);
-  };
+
   
   return (
     <div className="overflow-x-auto shadow-md rounded-lg relative">
@@ -297,4 +295,6 @@ export default function LeadTable({
       </table>
     </div>
   );
-}
+});
+
+export default LeadTable;

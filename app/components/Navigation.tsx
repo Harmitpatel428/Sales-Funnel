@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 
-export default function Navigation() {
+const Navigation = memo(function Navigation() {
   const pathname = usePathname();
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
   
@@ -84,4 +84,6 @@ export default function Navigation() {
       </div>
     </nav>
   );
-}
+});
+
+export default Navigation;

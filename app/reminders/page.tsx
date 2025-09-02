@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation';
 // Calculate today's date at midnight UTC once per module load.
 // This is more efficient than calculating it in every component instance.
 // It might become stale if the page is open across midnight, but that's an acceptable trade-off for this app.
-const todayAtUTCMidnight = new Date(new Date().toISOString().split('T')[0]);
+const todayAtUTCMidnight = new Date(new Date().toISOString().split('T')[0]!);
 
 function LeadCard({ lead, onMarkDone, onViewDetails }: { lead: Lead; onMarkDone: () => void; onViewDetails: () => void }) {
   // Compare with the pre-calculated today's date.
@@ -36,7 +36,7 @@ function LeadCard({ lead, onMarkDone, onViewDetails }: { lead: Lead; onMarkDone:
     >
       <div className="flex justify-between items-start gap-4">
         <div className="min-w-0">
-          <h3 className="font-semibold text-gray-800 truncate">{lead.name}</h3>
+          <h3 className="font-semibold text-gray-800 truncate">{lead.clientName}</h3>
           <p className="text-gray-600 text-sm truncate">{lead.company}</p>
           <div className="flex flex-wrap gap-2 mt-2">
             <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(lead.status)}`}>
@@ -58,10 +58,10 @@ function LeadCard({ lead, onMarkDone, onViewDetails }: { lead: Lead; onMarkDone:
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
             <p className="text-gray-700">
-              <span className="font-medium">Email:</span> {lead.email || 'N/A'}
+              <span className="font-medium">Phone:</span> {lead.mobileNumber || 'N/A'}
             </p>
             <p className="text-gray-700">
-              <span className="font-medium">Phone:</span> {lead.phone || 'N/A'}
+              <span className="font-medium">Consumer #:</span> {lead.consumerNumber || 'N/A'}
             </p>
           </div>
           {lead.notes && (

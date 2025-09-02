@@ -90,14 +90,22 @@ export function LeadProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Save leads to localStorage whenever they change
+  // Save leads to localStorage whenever they change (debounced)
   useEffect(() => {
-    localStorage.setItem('leads', JSON.stringify(leads));
+    const timeoutId = setTimeout(() => {
+      localStorage.setItem('leads', JSON.stringify(leads));
+    }, 300); // Debounce by 300ms
+    
+    return () => clearTimeout(timeoutId);
   }, [leads]);
   
-  // Save views to localStorage whenever they change
+  // Save views to localStorage whenever they change (debounced)
   useEffect(() => {
-    localStorage.setItem('savedViews', JSON.stringify(savedViews));
+    const timeoutId = setTimeout(() => {
+      localStorage.setItem('savedViews', JSON.stringify(savedViews));
+    }, 300); // Debounce by 300ms
+    
+    return () => clearTimeout(timeoutId);
   }, [savedViews]);
 
   const addLead = (lead: Lead) => {

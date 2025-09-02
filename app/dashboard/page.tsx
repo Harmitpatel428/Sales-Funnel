@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useLeads, Lead, LeadFilters } from '../context/LeadContext';
 import LeadTable from '../components/LeadTable';
 import { useRouter } from 'next/navigation';
@@ -34,45 +34,49 @@ export default function DashboardPage() {
     setSelectedLeads(new Set());
   }, [activeFilters]);
   
-  // Calculate summary stats
-  const totalLeads = leads.length;
-  const dueToday = leads.filter(lead => {
+  // Calculate summary stats with memoization
+  const summaryStats = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const followUpDate = new Date(lead.followUpDate);
-    followUpDate.setHours(0, 0, 0, 0);
-    return followUpDate.getTime() === today.getTime() && !lead.isDone;
-  }).length;
-  
-  const upcoming = leads.filter(lead => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const followUpDate = new Date(lead.followUpDate);
-    followUpDate.setHours(0, 0, 0, 0);
     const sevenDaysLater = new Date(today);
     sevenDaysLater.setDate(today.getDate() + 7);
-    return followUpDate > today && followUpDate <= sevenDaysLater && !lead.isDone;
-  }).length;
-  
-  const overdue = leads.filter(lead => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const followUpDate = new Date(lead.followUpDate);
-    followUpDate.setHours(0, 0, 0, 0);
-    return followUpDate < today && !lead.isDone;
-  }).length;
 
-  const followUpMandate = leads.filter(lead => {
-    return lead.status === 'Follow-up' && !lead.isDone;
-  }).length;
+    let dueToday = 0;
+    let upcoming = 0;
+    let overdue = 0;
+    let followUpMandate = 0;
 
-  const pendingDocuments = leads.filter(lead => {
-    return lead.documentStatus === 'Pending Documents' && !lead.isDone;
-  }).length;
+    leads.forEach(lead => {
+      if (lead.isDone) return;
 
-  const signedMandate = leads.filter(lead => {
-    return lead.documentStatus === 'Signed Mandate' && !lead.isDone;
-  }).length;
+      const followUpDate = new Date(lead.followUpDate);
+      followUpDate.setHours(0, 0, 0, 0);
+
+      if (followUpDate.getTime() === today.getTime()) {
+        dueToday++;
+      } else if (followUpDate > today && followUpDate <= sevenDaysLater) {
+        upcoming++;
+      } else if (followUpDate < today) {
+        overdue++;
+      }
+
+      if (lead.status === 'Follow-up') {
+        followUpMandate++;
+      }
+    });
+
+    return {
+      totalLeads: leads.length,
+      dueToday,
+      upcoming,
+      overdue,
+      followUpMandate
+    };
+  }, [leads]);
+
+  const { totalLeads, dueToday, upcoming, overdue, followUpMandate } = summaryStats;
+
+
   
   // Handle lead click to view details
   const handleLeadClick = (lead: Lead) => {
@@ -161,7 +165,7 @@ export default function DashboardPage() {
     const lines = csvText.split('\n').filter(line => line.trim());
     if (lines.length < 2) throw new Error('CSV file must have at least a header and one data row');
 
-    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+    const headers = lines[0]!.split(',').map(h => h.trim().replace(/"/g, ''));
     const dataRows = lines.slice(1);
 
     return dataRows.map(row => {
@@ -202,7 +206,15 @@ export default function DashboardPage() {
             
             // Get the first sheet
             const sheetName = workbook.SheetNames[0];
+            if (!sheetName) {
+              reject(new Error('No sheets found in Excel file'));
+              return;
+            }
             const worksheet = workbook.Sheets[sheetName];
+            if (!worksheet) {
+              reject(new Error('Could not load worksheet'));
+              return;
+            }
             console.log('Worksheet loaded:', sheetName);
             
             // Convert to JSON with proper date handling
@@ -229,12 +241,13 @@ export default function DashboardPage() {
             console.log('Data rows count:', dataRows.length);
             console.log('=== END EXCEL HEADERS DEBUG ===');
 
-            const leads = dataRows.map((row: any, index: number) => {
+            const leads = dataRows.map((row: unknown, index: number) => {
               console.log('Processing row ' + index + ':', row);
               const lead: Partial<Lead> = {};
+              const rowArray = row as unknown[];
               
               headers.forEach((header, headerIndex) => {
-                const value = row[headerIndex] || '';
+                const value = rowArray[headerIndex] || '';
                 console.log('Mapping header "' + header + '" (index ' + headerIndex + ') to value:', value, '(type: ' + typeof value + ')');
                 mapHeaderToField(lead, header, value);
               });
@@ -268,7 +281,7 @@ export default function DashboardPage() {
   };
 
   // Convert Excel serial date to readable date string in DD-MM-YYYY format
-  const convertExcelDate = (value: any): string => {
+  const convertExcelDate = (value: string | number | Date | null | undefined): string => {
     if (!value) return '';
     
     // If it's already a string, return as is
@@ -336,6 +349,7 @@ export default function DashboardPage() {
   };
 
   // Map header to lead field - updated to match your Excel format exactly
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapHeaderToField = (lead: Partial<Lead>, header: string, value: any) => {
     const headerLower = header.toLowerCase().trim();
     console.log('=== MAPPING DEBUG ===');
@@ -467,8 +481,13 @@ export default function DashboardPage() {
       case 'mandate status':
       case 'mandatestatus':
       case 'mandate':
-        if (value.toLowerCase() === 'pending' || value.toLowerCase() === 'in progress' || value.toLowerCase() === 'completed') {
-          lead.mandateStatus = String(value) as Lead['mandateStatus'];
+        const mandateValue = String(value).toLowerCase();
+        if (mandateValue === 'pending') {
+          lead.mandateStatus = 'Pending';
+        } else if (mandateValue === 'in progress') {
+          lead.mandateStatus = 'In Progress';
+        } else if (mandateValue === 'completed') {
+          lead.mandateStatus = 'Completed';
         } else {
           lead.mandateStatus = 'Pending';
         }
@@ -476,9 +495,15 @@ export default function DashboardPage() {
       case 'document status':
       case 'documentstatus':
       case 'documents':
-        if (value.toLowerCase() === 'pending documents' || value.toLowerCase() === 'documents submitted' || 
-            value.toLowerCase() === 'documents reviewed' || value.toLowerCase() === 'signed mandate') {
-          lead.documentStatus = String(value) as Lead['documentStatus'];
+        const docValue = String(value).toLowerCase();
+        if (docValue === 'pending documents') {
+          lead.documentStatus = 'Pending Documents';
+        } else if (docValue === 'documents submitted') {
+          lead.documentStatus = 'Documents Submitted';
+        } else if (docValue === 'documents reviewed') {
+          lead.documentStatus = 'Documents Reviewed';
+        } else if (docValue === 'signed mandate') {
+          lead.documentStatus = 'Signed Mandate';
         } else {
           lead.documentStatus = 'Pending Documents';
         }
@@ -494,7 +519,7 @@ export default function DashboardPage() {
     
     // More comprehensive regex to catch different address formats
     const addressMatch = notes.match(/Address:\s*(.+?)(?:\s*\||\s*$)/i);
-    if (addressMatch) {
+    if (addressMatch && addressMatch[1]) {
       const address = addressMatch[1].trim();
       // Remove the entire address line including "Address:" prefix
       let cleanNotes = notes.replace(/Address:\s*.+?(?:\s*\||\s*$)/i, '').trim();
@@ -558,7 +583,7 @@ export default function DashboardPage() {
   };
 
   // Set default values for missing fields - only set defaults for truly missing required fields
-  const setDefaultValues = (lead: any): any => {
+  const setDefaultValues = (lead: Partial<Lead>): Lead => {
     // Extract address from notes if it exists
     const { address, cleanNotes } = extractAddressFromNotes(lead.notes || '');
     
@@ -566,7 +591,7 @@ export default function DashboardPage() {
     console.log('Input lead mobileNumber: "' + lead.mobileNumber + '" (type: ' + typeof lead.mobileNumber + ')');
     console.log('Input lead consumerNumber: "' + lead.consumerNumber + '" (type: ' + typeof lead.consumerNumber + ')');
     
-    const result = {
+    const result: Lead = {
       ...lead,
       id: lead.id || crypto.randomUUID(),
       // Only set defaults for truly missing required fields, preserve actual data
@@ -576,6 +601,7 @@ export default function DashboardPage() {
       company: lead.company || '',
       clientName: lead.clientName || '',
       mobileNumber: lead.mobileNumber || '', // Keep actual phone numbers, only set empty if truly missing
+      mobileNumbers: lead.mobileNumbers || [{ id: '1', number: lead.mobileNumber || '', isMain: true }],
       companyLocation: lead.companyLocation || address,
       unitType: lead.unitType || 'New',
       status: lead.status || 'New',
@@ -796,7 +822,7 @@ export default function DashboardPage() {
     )) {
       // Show the main mobile number or the first one found
       const mainMobile = lead.mobileNumbers?.find(m => m.isMain)?.number || lead.mobileNumber || allMobileNumbers[0];
-      searchValue = mainMobile;
+      searchValue = mainMobile || '';
     } else if (lead.company.toLowerCase().includes(queryLower)) {
       searchValue = lead.company;
     } else if (lead.companyLocation?.toLowerCase().includes(queryLower)) {
@@ -815,17 +841,7 @@ export default function DashboardPage() {
     setShowSuggestions(false);
   };
 
-  // Handle phone number search
-  const handlePhoneSearch = () => {
-    const phoneQuery = searchTerm.replace(/[^0-9]/g, '');
-    if (phoneQuery.length >= 7) {
-      setActiveFilters(prev => ({
-        ...prev,
-        searchTerm: phoneQuery
-      }));
-      setShowSuggestions(false);
-    }
-  };
+
 
   // Clear search
   const clearSearch = () => {
@@ -1085,7 +1101,7 @@ export default function DashboardPage() {
                 const status = e.target.value;
                 setActiveFilters(prev => ({
                   ...prev,
-                  status: status ? [status as Lead['status']] : undefined
+                  status: status ? [status as Lead['status']] : []
                 }));
               }}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-black"
@@ -1278,7 +1294,7 @@ export default function DashboardPage() {
                           <div className="mt-2">
                             <p className="text-sm text-gray-600 mb-1">All Numbers:</p>
                             <div className="space-y-1">
-                              {selectedLead.mobileNumbers.map((mobile, index) => (
+                              {selectedLead.mobileNumbers.map((mobile) => (
                                 <div key={mobile.id} className="flex items-center space-x-2">
                                   <span className="text-sm text-gray-800">{mobile.number?.replace(/-/g, '')}</span>
                                   {mobile.isMain && (
@@ -1321,14 +1337,17 @@ export default function DashboardPage() {
                           {selectedLead.followUpDate ? (() => {
                             try {
                               // Handle DD-MM-YYYY format
-                              if (selectedLead.followUpDate.includes('-') && selectedLead.followUpDate.split('-')[0].length <= 2) {
+                              const dateParts = selectedLead.followUpDate.split('-');
+                              if (selectedLead.followUpDate.includes('-') && dateParts[0] && dateParts[0].length <= 2) {
                                 const [day, month, year] = selectedLead.followUpDate.split('-');
-                                const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                                return date.toLocaleDateString('en-US', { 
-                                  year: 'numeric', 
-                                  month: 'long', 
-                                  day: 'numeric' 
-                                });
+                                if (day && month && year) {
+                                  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                                  return date.toLocaleDateString('en-US', { 
+                                    year: 'numeric', 
+                                    month: 'long', 
+                                    day: 'numeric' 
+                                  });
+                                }
                               }
                               // Handle other date formats
                               const date = new Date(selectedLead.followUpDate);
@@ -1337,7 +1356,7 @@ export default function DashboardPage() {
                                 month: 'long', 
                                 day: 'numeric' 
                               });
-                            } catch (error) {
+                            } catch {
                               return selectedLead.followUpDate || 'Not set';
                             }
                           })() : 'Not set'}
@@ -1412,7 +1431,7 @@ export default function DashboardPage() {
                     if (selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0) {
                       const validNumbers = selectedLead.mobileNumbers.filter(mobile => mobile.number && mobile.number.trim() !== '');
                       if (validNumbers.length > 0) {
-                        validNumbers.forEach((mobile, index) => {
+                        validNumbers.forEach((mobile) => {
                           const cleanNumber = mobile.number.replace(/[^0-9]/g, '');
                           if (mobile.isMain) {
                             info += `Contacts - ${cleanNumber} - Main\n`;
