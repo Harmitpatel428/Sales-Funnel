@@ -7,8 +7,10 @@ import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { leads, addLead, deleteLead, getFilteredLeads } = useLeads();
-  const [activeFilters, setActiveFilters] = useState<LeadFilters>({});
+  const { leads, addLead, deleteLead, getFilteredLeads, markAsDone } = useLeads();
+  const [activeFilters, setActiveFilters] = useState<LeadFilters>({
+    status: ['New', 'Contacted', 'In Progress', 'Follow-up'] // Exclude completed leads
+  });
   const [isImporting, setIsImporting] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showLeadModal, setShowLeadModal] = useState(false);
@@ -21,6 +23,7 @@ export default function DashboardPage() {
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const [showMassDeleteModal, setShowMassDeleteModal] = useState(false);
   const [leadsToDelete, setLeadsToDelete] = useState<Lead[]>([]);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   // Debug logging for leads state changes
   useEffect(() => {
@@ -33,6 +36,26 @@ export default function DashboardPage() {
     setSelectAll(false);
     setSelectedLeads(new Set());
   }, [activeFilters]);
+  
+  // Helper function to parse DD-MM-YYYY format dates
+  const parseFollowUpDate = (dateString: string): Date | null => {
+    if (!dateString) return null;
+    
+    try {
+      // Handle DD-MM-YYYY format
+      const dateParts = dateString.split('-');
+      if (dateString.includes('-') && dateParts[0] && dateParts[0].length <= 2) {
+        const [day, month, year] = dateString.split('-');
+        if (day && month && year) {
+          return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        }
+      }
+      // Handle other date formats
+      return new Date(dateString);
+    } catch {
+      return null;
+    }
+  };
   
   // Calculate summary stats with memoization
   const summaryStats = useMemo(() => {
@@ -47,9 +70,11 @@ export default function DashboardPage() {
     let followUpMandate = 0;
 
     leads.forEach(lead => {
-      if (lead.isDone) return;
+      if (lead.isDone || !lead.followUpDate) return;
 
-      const followUpDate = new Date(lead.followUpDate);
+      const followUpDate = parseFollowUpDate(lead.followUpDate);
+      if (!followUpDate) return;
+      
       followUpDate.setHours(0, 0, 0, 0);
 
       if (followUpDate.getTime() === today.getTime()) {
@@ -85,6 +110,25 @@ export default function DashboardPage() {
     // Prevent body scrolling when modal is open
     document.body.style.overflow = 'hidden';
   };
+
+  // Copy to clipboard function
+  const copyToClipboard = async (text: string, fieldName: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(fieldName);
+      setTimeout(() => setCopiedField(null), 2000); // Reset after 2 seconds
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  };
+
+  // Handle marking lead as done - removes from dashboard table
+  const handleMarkAsDone = (leadId: string) => {
+    markAsDone(leadId);
+    // Lead will automatically be removed from dashboard due to status filter
+  };
+
+
 
   // Handle Excel/CSV import
   const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -609,6 +653,7 @@ export default function DashboardPage() {
       followUpDate: lead.followUpDate || '',
       notes: cleanNotes || '',
       isDone: lead.isDone || false,
+      isDeleted: lead.isDeleted || false,
       activities: lead.activities || [],
       mandateStatus: lead.mandateStatus || 'Pending',
       documentStatus: lead.documentStatus || 'Pending Documents'
@@ -660,6 +705,7 @@ export default function DashboardPage() {
           followUpDate: leadData.followUpDate || '', // Keep blank for imports
           notes: leadData.notes || '',
           isDone: leadData.isDone || false,
+          isDeleted: leadData.isDeleted || false,
           mandateStatus: leadData.mandateStatus || 'Pending',
           documentStatus: leadData.documentStatus || 'Pending Documents'
         };
@@ -968,6 +1014,7 @@ export default function DashboardPage() {
                 followUpDate: '', // Keep blank for test leads
                 notes: 'This is a test lead for testing purposes',
                 isDone: false,
+                isDeleted: false,
                 mandateStatus: 'Pending',
                 documentStatus: 'Pending Documents'
               };
@@ -1257,135 +1304,170 @@ export default function DashboardPage() {
         </div>
       </div>
       
+
+      
       {/* Lead Table */}
       <div data-lead-table>
-        <LeadTable 
-          filters={activeFilters} 
-          onLeadClick={handleLeadClick}
-          selectedLeads={selectedLeads}
-          onLeadSelection={handleLeadSelection}
-          selectAll={selectAll}
-          onSelectAll={handleSelectAll}
-          key={leads.length}
-        />
+      <LeadTable 
+        filters={activeFilters} 
+        onLeadClick={handleLeadClick}
+        selectedLeads={selectedLeads}
+        onLeadSelection={handleLeadSelection}
+        selectAll={selectAll}
+        onSelectAll={handleSelectAll}
+          onMarkAsDone={handleMarkAsDone}
+        key={leads.length}
+      />
       </div>
 
       {/* Lead Detail Modal */}
       {showLeadModal && selectedLead && (
-        <div className="fixed inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-black bg-opacity-80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[90vh] overflow-hidden flex flex-col border border-gray-100 transform transition-all duration-300 ease-out">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-10 mx-auto p-5 border w-11/12 md:w-5/6 lg:w-4/5 xl:w-3/4 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
             {/* Modal Header */}
-            <div className="flex justify-between items-center p-3 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
-              <h2 className="text-lg font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">Lead Details</h2>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Lead Details</h3>
               <button
                 onClick={() => {
                   setShowLeadModal(false);
                   // Restore body scrolling when modal is closed
                   document.body.style.overflow = 'unset';
                 }}
-                className="text-gray-400 hover:text-gray-600 text-xl font-bold p-2 rounded-full hover:bg-gray-100 transition-all duration-200"
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  title="Close modal"
               >
-                ×
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
               </button>
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 flex-1 overflow-y-auto bg-gradient-to-br from-gray-50/30 to-white">
-              {/* Compact Layout - All content in one grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-                {/* Left Column */}
-                <div className="space-y-4">
-                  {/* Basic Information */}
-                  <div>
-                    <h3 className="text-xl font-bold text-blue-700 mb-3">Basic Information</h3>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-base font-medium text-gray-600">KVA</label>
-                        <p className="text-base text-gray-800">{selectedLead.kva}</p>
-                      </div>
-                      <div>
-                        <label className="block text-base font-medium text-gray-600">Connection Date</label>
-                        <p className="text-base text-gray-800">{selectedLead.connectionDate || 'Not provided'}</p>
-                      </div>
-                      <div>
-                        <label className="block text-base font-medium text-gray-600">Consumer Number</label>
-                        <p className="text-base text-gray-800">{selectedLead.consumerNumber || 'Not provided'}</p>
-                      </div>
-                      <div>
-                        <label className="block text-base font-medium text-gray-600">Unit Type</label>
-                        <p className="text-base text-gray-800">{selectedLead.unitType || 'Not specified'}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Company Details */}
-                  <div>
-                    <h3 className="text-xl font-bold text-green-700 mb-3">Company Details</h3>
                     <div className="space-y-3">
-                      <div>
-                        <label className="block text-base font-medium text-gray-600">Company</label>
-                        <p className="text-base text-gray-800">{selectedLead.company || 'Not provided'}</p>
-                      </div>
-                      <div>
-                        <label className="block text-base font-medium text-gray-600">Client Name</label>
-                        <p className="text-base text-gray-800">{selectedLead.clientName || 'Not provided'}</p>
-                      </div>
-                      <div>
-                        <label className="block text-base font-medium text-gray-600">Mobile Numbers</label>
-                        {selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0 ? (
-                          <div className="space-y-0.5">
-                            {selectedLead.mobileNumbers.map((mobile) => (
-                              <div key={mobile.id} className="flex items-center bg-gray-50 rounded p-1">
-                                <div className="flex-1">
-                                  {/* Show contact name section only if there's a name to show */}
-                                  {(() => {
-                                    // Determine what name to show
-                                    let displayName = '';
-                                    if (mobile.name) {
-                                      displayName = mobile.name;
-                                    } else if (selectedLead.mobileNumbers && selectedLead.mobileNumbers[0] === mobile && selectedLead.clientName) {
-                                      // Only show client name for the first mobile number (index 0)
-                                      displayName = selectedLead.clientName;
-                                    }
-                                    
-                                    // Only show the name section if there's a name to display
-                                    return displayName ? (
-                                      <div className="flex items-center gap-3">
-                                        <span className="text-sm font-medium text-gray-900">
-                                          {displayName}
-                                        </span>
-                                        {mobile.isMain && (
-                                          <span className="inline-flex px-1.5 py-0.5 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
-                                            Main
-                                          </span>
-                                        )}
-                                      </div>
-                                    ) : null;
-                                  })()}
-                                  <div className="text-sm text-gray-600">{mobile.number?.replace(/-/g, '') || ''}</div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                {/* Main Information Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {/* Basic Info */}
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-xs font-medium text-gray-600">Client Name</label>
+                      <button
+                        onClick={() => copyToClipboard(selectedLead.clientName, 'clientName')}
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        title="Copy client name"
+                      >
+                        {copiedField === 'clientName' ? (
+                          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
                         ) : (
-                          <p className="text-base text-gray-800">
-                            {selectedLead.mobileNumber?.replace(/-/g, '') || ''}
-                          </p>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
                         )}
+                      </button>
                       </div>
+                    <p className="text-sm font-medium text-gray-900">{selectedLead.clientName}</p>
+                      </div>
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-xs font-medium text-gray-600">Company</label>
+                      <button
+                        onClick={() => copyToClipboard(selectedLead.company, 'company')}
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        title="Copy company name"
+                      >
+                        {copiedField === 'company' ? (
+                          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        )}
+                      </button>
+                                      </div>
+                    <p className="text-sm font-medium text-gray-900">{selectedLead.company}</p>
+                                </div>
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-xs font-medium text-gray-600">Consumer Number</label>
+                      <button
+                        onClick={() => copyToClipboard(selectedLead.consumerNumber || 'N/A', 'consumerNumber')}
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        title="Copy consumer number"
+                      >
+                        {copiedField === 'consumerNumber' ? (
+                          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        )}
+                      </button>
+                              </div>
+                    <p className="text-sm font-medium text-gray-900">{selectedLead.consumerNumber || 'N/A'}</p>
+                          </div>
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-xs font-medium text-gray-600">KVA</label>
+                      <button
+                        onClick={() => copyToClipboard(selectedLead.kva, 'kva')}
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        title="Copy KVA"
+                      >
+                        {copiedField === 'kva' ? (
+                          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        )}
+                      </button>
+                      </div>
+                    <p className="text-sm font-medium text-gray-900">{selectedLead.kva}</p>
                     </div>
+                  
+                  {/* Contact Info */}
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-xs font-medium text-gray-600">Main Phone</label>
+                      <button
+                        onClick={() => {
+                          const phoneNumber = selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0 
+                            ? selectedLead.mobileNumbers.find(m => m.isMain)?.number || selectedLead.mobileNumbers[0]?.number || 'N/A'
+                            : selectedLead.mobileNumber || 'N/A';
+                          copyToClipboard(phoneNumber, 'mainPhone');
+                        }}
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        title="Copy main phone number"
+                      >
+                        {copiedField === 'mainPhone' ? (
+                          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        )}
+                      </button>
                   </div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0 
+                        ? selectedLead.mobileNumbers.find(m => m.isMain)?.number || selectedLead.mobileNumbers[0]?.number || 'N/A'
+                        : selectedLead.mobileNumber || 'N/A'
+                      }
+                    </p>
                 </div>
-
-                {/* Right Column */}
-                <div className="space-y-4">
-                  {/* Lead Status */}
-                  <div>
-                    <h3 className="text-xl font-bold text-emerald-700 mb-3">Lead Status</h3>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-base font-medium text-gray-600">Current Status</label>
-                        <span className={`inline-flex px-2 py-1 text-sm font-semibold rounded-full ${
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                           selectedLead.status === 'New' ? 'bg-blue-100 text-blue-800' :
                           selectedLead.status === 'Contacted' ? 'bg-purple-100 text-purple-800' :
                           selectedLead.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' :
@@ -1396,186 +1478,203 @@ export default function DashboardPage() {
                           {selectedLead.status}
                         </span>
                       </div>
-                      <div>
-                        <label className="block text-base font-medium text-gray-600">Follow-up Date</label>
-                        <p className="text-base text-gray-800">
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Unit Type</label>
+                    <p className="text-sm font-medium text-gray-900">{selectedLead.unitType}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Completion</label>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      selectedLead.isDone ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {selectedLead.isDone ? 'Completed' : 'Active'}
+                    </span>
+                  </div>
+                  
+                  {/* Dates */}
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Connection Date</label>
+                    <p className="text-sm font-medium text-gray-900">{selectedLead.connectionDate}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Follow-up Date</label>
+                    <p className="text-sm font-medium text-gray-900">
                           {selectedLead.followUpDate ? (() => {
-                            try {
-                              // Handle DD-MM-YYYY format
+                        // Convert yyyy-mm-dd to dd-mm-yyyy
                               const dateParts = selectedLead.followUpDate.split('-');
-                              if (selectedLead.followUpDate.includes('-') && dateParts[0] && dateParts[0].length <= 2) {
-                                const [day, month, year] = selectedLead.followUpDate.split('-');
-                                if (day && month && year) {
-                                  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                                  return date.toLocaleDateString('en-US', { 
-                                    year: 'numeric', 
-                                    month: 'long', 
-                                    day: 'numeric' 
-                                  });
-                                }
-                              }
-                              // Handle other date formats
-                              const date = new Date(selectedLead.followUpDate);
-                              return date.toLocaleDateString('en-US', { 
-                                year: 'numeric', 
-                                month: 'long', 
-                                day: 'numeric' 
-                              });
-                            } catch {
-                              return selectedLead.followUpDate || 'Not set';
-                            }
-                          })() : 'Not set'}
+                        if (dateParts.length === 3) {
+                          return `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
+                        }
+                        return selectedLead.followUpDate;
+                      })() : 'N/A'}
                         </p>
                       </div>
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Last Activity</label>
+                    <p className="text-sm font-medium text-gray-900">{selectedLead.lastActivityDate}</p>
                     </div>
+                  
+                  {/* Mandate & Document Status */}
+                  {selectedLead.mandateStatus && (
+                    <div className="bg-gray-50 p-3 rounded-md">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Mandate Status</label>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        selectedLead.mandateStatus === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                        selectedLead.mandateStatus === 'In Progress' ? 'bg-blue-100 text-blue-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {selectedLead.mandateStatus}
+                      </span>
+                    </div>
+                  )}
+                  {selectedLead.documentStatus && (
+                    <div className="bg-gray-50 p-3 rounded-md">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Document Status</label>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        selectedLead.documentStatus === 'Pending Documents' ? 'bg-red-100 text-red-800' :
+                        selectedLead.documentStatus === 'Documents Submitted' ? 'bg-yellow-100 text-yellow-800' :
+                        selectedLead.documentStatus === 'Documents Reviewed' ? 'bg-blue-100 text-blue-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {selectedLead.documentStatus}
+                      </span>
+                    </div>
+                  )}
                   </div>
 
-                  {/* Address */}
-                  {(() => {
-                    // Get address from companyLocation or extract from notes
-                    let address = selectedLead.companyLocation || '';
-                    
-                    // If no companyLocation, try to extract from notes
-                    if (!address && selectedLead.notes) {
-                      const { address: extractedAddress } = extractAddressFromNotes(selectedLead.notes);
-                      address = extractedAddress;
-                    }
-                    
-                    return address ? (
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-700 mb-3">Address</h3>
-                        <div className="space-y-2">
-                          <p className="text-base text-gray-800">{address}</p>
+                {/* Additional Numbers */}
+                {selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 1 && (
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <label className="block text-xs font-medium text-gray-600 mb-2">Additional Numbers</label>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedLead.mobileNumbers.filter(m => !m.isMain).map((mobile, index) => (
+                        <span key={index} className="text-sm font-medium text-gray-900 bg-white px-2 py-1 rounded border">
+                          {mobile.name}: {mobile.number}
+                        </span>
+                      ))}
                         </div>
                       </div>
-                    ) : null;
-                  })()}
+                )}
 
-                  {/* Additional Information */}
-                  <div>
-                    <h3 className="text-xl font-bold text-orange-700 mb-3">Additional Information</h3>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="block text-base font-medium text-gray-600">Notes</label>
-                        <p className="text-base text-gray-800">
-                          {(() => {
-                            // Always show clean notes without address
-                            if (!selectedLead.notes) return 'No notes available';
-                            
-                            // Always extract clean notes to ensure no address is shown
-                            const { cleanNotes } = extractAddressFromNotes(selectedLead.notes);
-                            return cleanNotes || 'No notes available';
-                          })()}
-                        </p>
+                {/* Notes and Additional Info */}
+                {(selectedLead.companyLocation || selectedLead.notes || selectedLead.finalConclusion) && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {selectedLead.companyLocation && (
+                      <div className="bg-gray-50 p-3 rounded-md">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Company Location</label>
+                        <p className="text-sm font-medium text-gray-900">{selectedLead.companyLocation}</p>
                       </div>
+                    )}
+                    {selectedLead.notes && (
+                      <div className="bg-gray-50 p-3 rounded-md">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
+                        <p className="text-sm font-medium text-gray-900 line-clamp-3">{selectedLead.notes}</p>
+                    </div>
+                    )}
+                    {selectedLead.finalConclusion && (
+                      <div className="bg-gray-50 p-3 rounded-md">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Final Conclusion</label>
+                        <p className="text-sm font-medium text-gray-900 line-clamp-3">{selectedLead.finalConclusion}</p>
+                  </div>
+                    )}
+                </div>
+                )}
+
+                {/* Recent Activities - Compact */}
+                {selectedLead.activities && selectedLead.activities.length > 0 && (
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <label className="block text-xs font-medium text-gray-600 mb-2">Recent Activities</label>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {selectedLead.activities.slice(-3).map((activity) => (
+                        <div key={activity.id} className="bg-white p-2 rounded text-xs">
+                          <p className="text-gray-900 font-medium">{activity.description}</p>
+                          <p className="text-gray-500">
+                            {new Date(activity.timestamp).toLocaleDateString()}
+                          </p>
+              </div>
+                      ))}
                     </div>
                   </div>
-                </div>
-              </div>
+                )}
             </div>
             
-            {/* Action Buttons - Positioned at the very bottom */}
-            <div className="flex justify-end space-x-2 p-4 border-t border-gray-200 bg-gradient-to-r from-gray-50 to-white shadow-inner">
+              {/* Modal Footer */}
+              <div className="flex justify-between items-center mt-6 pt-4 border-t">
               <button 
                 onClick={() => {
-                  // Copy lead information to clipboard
-                  const copyText = () => {
-                    let info = '';
-                    
-                    // Company
-                    if (selectedLead.company) {
-                      info += `Company: ${selectedLead.company}\n`;
-                    }
-                    
-                    // Client Name
-                    if (selectedLead.clientName) {
-                      info += `Client Name: ${selectedLead.clientName}\n`;
-                    }
-                    
-                    // All mobile numbers
-                    if (selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0) {
-                      const validNumbers = selectedLead.mobileNumbers.filter(mobile => mobile.number && mobile.number.trim() !== '');
-                      if (validNumbers.length > 0) {
-                        validNumbers.forEach((mobile) => {
-                          const cleanNumber = mobile.number.replace(/[^0-9]/g, '');
-                          const contactName = mobile.name || (mobile.isMain ? selectedLead.clientName : '');
-                          const contactInfo = contactName ? `${contactName} - ${cleanNumber}` : cleanNumber;
-                          if (mobile.isMain) {
-                            info += `Contacts - ${contactInfo} - Main\n`;
-                          } else {
-                            info += `Contacts - ${contactInfo}\n`;
-                          }
-                        });
-                      }
-                    } else if (selectedLead.mobileNumber) {
-                      // Fallback to old mobile number format
-                      const cleanNumber = selectedLead.mobileNumber.replace(/[^0-9]/g, '');
-                      info += `Contacts - ${cleanNumber} - Main\n`;
-                    }
-                    
-                    // Unit Type
-                    if (selectedLead.unitType) {
-                      info += `Unit Type: ${selectedLead.unitType}\n`;
-                    }
-                    
-                    // KVA
-                    if (selectedLead.kva) {
-                      info += `KVA: ${selectedLead.kva}\n`;
-                    }
-                    
-                    // Address
-                    if (selectedLead.companyLocation) {
-                      info += `Address: ${selectedLead.companyLocation}`;
-                    }
-                    
-                    return info.trim();
-                  };
-                  
-                  const textToCopy = copyText();
-                  
-                  // Copy to clipboard
-                  navigator.clipboard.writeText(textToCopy).then(() => {
-                    // Information copied successfully (no alert)
-                  }).catch(() => {
-                    // Fallback for older browsers
-                    const textArea = document.createElement('textarea');
-                    textArea.value = textToCopy;
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textArea);
-                    // Information copied successfully (no alert)
-                  });
-                }}
-                className="px-4 py-2 text-sm font-semibold bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-              >
-                Copy Info
+                    const allInfo = `Client: ${selectedLead.clientName}
+Company: ${selectedLead.company}
+Consumer Number: ${selectedLead.consumerNumber || 'N/A'}
+KVA: ${selectedLead.kva}
+Phone: ${selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0 
+  ? selectedLead.mobileNumbers.find(m => m.isMain)?.number || selectedLead.mobileNumbers[0]?.number || 'N/A'
+  : selectedLead.mobileNumber || 'N/A'}
+Status: ${selectedLead.status}
+Unit Type: ${selectedLead.unitType}
+Connection Date: ${selectedLead.connectionDate}
+Follow-up Date: ${selectedLead.followUpDate || 'N/A'}
+Last Activity: ${selectedLead.lastActivityDate}
+${selectedLead.companyLocation ? `Location: ${selectedLead.companyLocation}` : ''}
+${selectedLead.notes ? `Notes: ${selectedLead.notes}` : ''}
+${selectedLead.finalConclusion ? `Conclusion: ${selectedLead.finalConclusion}` : ''}`;
+                    copyToClipboard(allInfo, 'allInfo');
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors flex items-center space-x-2"
+                >
+                  {copiedField === 'allInfo' ? (
+                    <>
+                      <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      <span>Copy All Info</span>
+                    </>
+                  )}
               </button>
+                <div className="flex space-x-3">
               <button 
                 onClick={() => {
                   setShowLeadModal(false);
                   // Restore body scrolling when modal is closed
                   document.body.style.overflow = 'unset';
                 }}
-                className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
               >
                 Close
               </button>
               <button 
                 onClick={() => handleEditLead(selectedLead)}
-                className="px-4 py-2 text-sm font-semibold bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
                 Edit Lead
+              </button>
+                  <button
+                    onClick={() => {
+                      handleMarkAsDone(selectedLead.id);
+                      setShowLeadModal(false);
+                      document.body.style.overflow = 'unset';
+                    }}
+                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
+                  >
+                    Mark as Done
               </button>
               <button
                 onClick={() => {
                   setLeadToDelete(selectedLead);
                   setShowDeleteModal(true);
                 }}
-                className="px-4 py-2 text-sm font-semibold bg-gradient-to-r from-red-600 to-red-700 text-white hover:from-red-700 hover:to-red-800 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
               >
                 Delete Lead
               </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

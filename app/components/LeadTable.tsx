@@ -13,6 +13,7 @@ interface LeadTableProps {
   onLeadSelection?: (leadId: string, checked: boolean) => void;
   selectAll?: boolean;
   onSelectAll?: (checked: boolean) => void;
+  onMarkAsDone?: (leadId: string) => void;
 }
 
 const LeadTable = memo(function LeadTable({ 
@@ -21,7 +22,8 @@ const LeadTable = memo(function LeadTable({
   selectedLeads = new Set(), 
   onLeadSelection, 
   selectAll = false, 
-  onSelectAll 
+  onSelectAll,
+  onMarkAsDone
 }: LeadTableProps) {
   const { leads, getFilteredLeads } = useLeads();
   const [sortField, setSortField] = useState<SortField>('');
@@ -226,6 +228,11 @@ const LeadTable = memo(function LeadTable({
             >
               Next Follow-up{renderSortIndicator('followUpDate')}
             </th>
+            {onMarkAsDone && (
+              <th scope="col" className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
+            )}
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
@@ -282,11 +289,25 @@ const LeadTable = memo(function LeadTable({
                 <td className="px-2 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-500">{formatDate(lead.followUpDate)}</div>
                 </td>
+                {onMarkAsDone && (
+                  <td className="px-2 py-4 whitespace-nowrap">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onMarkAsDone(lead.id);
+                      }}
+                      className="px-2 py-1 text-xs bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                      title="Mark as Done"
+                    >
+                      Done
+                    </button>
+                  </td>
+                )}
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan={onLeadSelection ? 8 : 7} className="px-6 py-4 text-center text-sm text-gray-500">
+              <td colSpan={onLeadSelection ? (onMarkAsDone ? 9 : 8) : (onMarkAsDone ? 8 : 7)} className="px-6 py-4 text-center text-sm text-gray-500">
                 No leads found matching the current filters.
               </td>
             </tr>

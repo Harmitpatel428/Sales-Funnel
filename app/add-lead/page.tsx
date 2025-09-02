@@ -301,6 +301,7 @@ export default function AddLeadPage() {
           finalConclusion: formData.finalConclusion,
           notes: formData.notes,
           isDone: false,
+          isDeleted: false,
           mandateStatus: 'Pending',
           documentStatus: 'Pending Documents',
         };
@@ -349,6 +350,7 @@ export default function AddLeadPage() {
           finalConclusion: formData.finalConclusion,
           notes: formData.notes,
           isDone: false,
+          isDeleted: false,
           mandateStatus: 'Pending',
           documentStatus: 'Pending Documents',
           activities: [{

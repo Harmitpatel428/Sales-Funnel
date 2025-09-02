@@ -197,7 +197,10 @@ export default function DueTodayPage() {
                             {lead.status}
                           </span>
                           <button
-                            onClick={() => router.push(`/add-lead?mode=edit&id=${lead.id}`)}
+                            onClick={() => {
+                              localStorage.setItem('editingLead', JSON.stringify(lead));
+                              router.push(`/add-lead?mode=edit&id=${lead.id}`);
+                            }}
                             className="px-3 py-1 bg-yellow-600 text-white text-sm rounded-md hover:bg-yellow-700 transition-colors"
                           >
                             Update Status
@@ -260,7 +263,10 @@ export default function DueTodayPage() {
                             {lead.status}
                           </span>
                           <button
-                            onClick={() => router.push(`/add-lead?mode=edit&id=${lead.id}`)}
+                            onClick={() => {
+                              localStorage.setItem('editingLead', JSON.stringify(lead));
+                              router.push(`/add-lead?mode=edit&id=${lead.id}`);
+                            }}
                             className="px-3 py-1 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors"
                           >
                             Update Status

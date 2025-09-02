@@ -30,6 +30,7 @@ export interface Lead {
   finalConclusion?: string;
   notes?: string;
   isDone: boolean;
+  isDeleted: boolean; // New field to mark leads as deleted instead of removing them
   activities?: Activity[];
   mandateStatus?: 'Pending' | 'In Progress' | 'Completed';
   documentStatus?: 'Pending Documents' | 'Documents Submitted' | 'Documents Reviewed' | 'Signed Mandate';
@@ -44,6 +45,7 @@ export interface Activity {
 
 interface LeadContextType {
   leads: Lead[];
+  setLeads: React.Dispatch<React.SetStateAction<Lead[]>>;
   addLead: (lead: Lead) => void;
   updateLead: (updatedLead: Lead) => void;
   deleteLead: (id: string) => void;
@@ -132,12 +134,22 @@ export function LeadProvider({ children }: { children: ReactNode }) {
   };
   
   const deleteLead = (id: string) => {
-    setLeads(prev => prev.filter(lead => lead.id !== id));
+    setLeads(prev =>
+      prev.map(lead => 
+        lead.id === id 
+          ? { ...lead, isDeleted: true, lastActivityDate: new Date().toISOString() }
+          : lead
+      )
+    );
   };
 
   const markAsDone = (id: string) => {
     setLeads(prev =>
-      prev.map(l => (l.id === id ? { ...l, isDone: true } : l))
+      prev.map(l => (l.id === id ? { 
+        ...l, 
+        isDone: true,
+        lastActivityDate: new Date().toISOString() // Update timestamp when marked as done
+      } : l))
     );
   };
   
@@ -166,6 +178,16 @@ export function LeadProvider({ children }: { children: ReactNode }) {
   
   const getFilteredLeads = (filters: LeadFilters): Lead[] => {
     return leads.filter(lead => {
+      // Filter out deleted leads (isDeleted: true) - they should not appear in dashboard
+      if (lead.isDeleted) {
+        return false;
+      }
+      
+      // Filter out completed leads (isDone: true)
+      if (lead.isDone) {
+        return false;
+      }
+      
       // Filter by status
       if (filters.status && filters.status.length > 0 && !filters.status.includes(lead.status)) {
         return false;
@@ -239,6 +261,7 @@ export function LeadProvider({ children }: { children: ReactNode }) {
   return (
     <LeadContext.Provider value={{
       leads,
+      setLeads,
       addLead,
       updateLead,
       deleteLead,
