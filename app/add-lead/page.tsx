@@ -302,6 +302,7 @@ export default function AddLeadPage() {
           notes: formData.notes,
           isDone: false,
           isDeleted: false,
+          isUpdated: false,
           mandateStatus: 'Pending',
           documentStatus: 'Pending Documents',
         };
@@ -315,7 +316,13 @@ export default function AddLeadPage() {
         localStorage.removeItem('editingLead');
         
         // Navigate back to appropriate page
-        router.push(cameFromHome ? '/' : '/dashboard');
+        if (cameFromHome) {
+          router.push('/');
+        } else {
+          // Add a flag to indicate successful update
+          localStorage.setItem('leadUpdated', 'true');
+          router.push('/dashboard');
+        }
       } else {
         // Add new lead
         const leadId = generateId();
@@ -351,6 +358,7 @@ export default function AddLeadPage() {
           notes: formData.notes,
           isDone: false,
           isDeleted: false,
+          isUpdated: false,
           mandateStatus: 'Pending',
           documentStatus: 'Pending Documents',
           activities: [{
@@ -698,11 +706,12 @@ export default function AddLeadPage() {
                 disabled={isSubmitting}
               >
                 <option value="New">New</option>
-                <option value="Contacted">Contacted</option>
-                <option value="In Progress">In Progress</option>
+                <option value="CNR">CNR</option>
+                <option value="Busy">Busy</option>
                 <option value="Follow-up">Follow-up</option>
-                <option value="Closed - Won">Closed - Won</option>
-                <option value="Closed - Lost">Closed - Lost</option>
+                <option value="Deal Close">Deal Close</option>
+                <option value="Work Alloted">Work Alloted</option>
+                <option value="Hotlead">Hotlead</option>
               </select>
             </div>
             
@@ -750,7 +759,7 @@ export default function AddLeadPage() {
 
           <div className="space-y-2">
             <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
-              Notes
+              Last Discussion
             </label>
             <textarea
               id="notes"
@@ -759,7 +768,7 @@ export default function AddLeadPage() {
               onChange={handleChange}
               rows={5}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200 resize-vertical text-black"
-              placeholder="Enter any additional notes or comments about this lead"
+              placeholder="Enter details about the last discussion with this lead"
               disabled={isSubmitting}
             />
           </div>

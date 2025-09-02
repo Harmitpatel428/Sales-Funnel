@@ -23,7 +23,7 @@ export interface Lead {
   marketingObjective?: string;
   budget?: string;
   timeline?: string;
-  status: 'New' | 'Contacted' | 'In Progress' | 'Follow-up' | 'Closed - Won' | 'Closed - Lost';
+  status: 'New' | 'CNR' | 'Busy' | 'Follow-up' | 'Deal Close' | 'Work Alloted' | 'Hotlead';
   contactOwner?: string;
   lastActivityDate: string;
   followUpDate: string;
@@ -31,6 +31,7 @@ export interface Lead {
   notes?: string;
   isDone: boolean;
   isDeleted: boolean; // New field to mark leads as deleted instead of removing them
+  isUpdated: boolean; // New field to track if lead has been updated
   activities?: Activity[];
   mandateStatus?: 'Pending' | 'In Progress' | 'Completed';
   documentStatus?: 'Pending Documents' | 'Documents Submitted' | 'Documents Reviewed' | 'Signed Mandate';
@@ -52,6 +53,7 @@ interface LeadContextType {
   markAsDone: (id: string) => void;
   addActivity: (leadId: string, description: string) => void;
   getFilteredLeads: (filters: LeadFilters) => Lead[];
+  resetUpdatedLeads: () => void;
   savedViews: SavedView[];
   addSavedView: (view: SavedView) => void;
   deleteSavedView: (id: string) => void;
@@ -121,7 +123,7 @@ export function LeadProvider({ children }: { children: ReactNode }) {
   const addLead = (lead: Lead) => {
     console.log('Adding lead:', lead);
     setLeads(prev => {
-      const newLeads = [...prev, lead];
+      const newLeads = [...prev, { ...lead, isUpdated: false }];
       console.log('Updated leads:', newLeads);
       return newLeads;
     });
@@ -129,7 +131,11 @@ export function LeadProvider({ children }: { children: ReactNode }) {
   
   const updateLead = (updatedLead: Lead) => {
     setLeads(prev => 
-      prev.map(lead => lead.id === updatedLead.id ? updatedLead : lead)
+      prev.map(lead => lead.id === updatedLead.id ? { 
+        ...updatedLead, 
+        isUpdated: true,
+        lastActivityDate: new Date().toISOString()
+      } : lead)
     );
   };
   
@@ -185,6 +191,12 @@ export function LeadProvider({ children }: { children: ReactNode }) {
       
       // Filter out completed leads (isDone: true)
       if (lead.isDone) {
+        return false;
+      }
+      
+      // Filter out updated leads (isUpdated: true) - but only when no specific status is selected
+      // This allows updated leads to appear when users click on specific status buttons
+      if (lead.isUpdated && (!filters.status || filters.status.length === 0)) {
         return false;
       }
       
@@ -249,6 +261,12 @@ export function LeadProvider({ children }: { children: ReactNode }) {
       return true;
     });
   };
+
+  const resetUpdatedLeads = () => {
+    setLeads(prev => 
+      prev.map(lead => ({ ...lead, isUpdated: false }))
+    );
+  };
   
   const addSavedView = (view: SavedView) => {
     setSavedViews(prev => [...prev, view]);
@@ -268,6 +286,7 @@ export function LeadProvider({ children }: { children: ReactNode }) {
       markAsDone,
       addActivity,
       getFilteredLeads,
+      resetUpdatedLeads,
       savedViews,
       addSavedView,
       deleteSavedView

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, memo, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useLeads, Lead, LeadFilters } from '../context/LeadContext';
 
 type SortField = keyof Lead | '';
@@ -13,27 +13,23 @@ interface LeadTableProps {
   onLeadSelection?: (leadId: string, checked: boolean) => void;
   selectAll?: boolean;
   onSelectAll?: (checked: boolean) => void;
-  onMarkAsDone?: (leadId: string) => void;
 }
 
-const LeadTable = memo(function LeadTable({ 
+function LeadTable({ 
   filters = {}, 
   onLeadClick, 
   selectedLeads = new Set(), 
   onLeadSelection, 
   selectAll = false, 
-  onSelectAll,
-  onMarkAsDone
+  onSelectAll
 }: LeadTableProps) {
   const { leads, getFilteredLeads } = useLeads();
   const [sortField, setSortField] = useState<SortField>('');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
+
   
-  // Debug logging
-  console.log('LeadTable render - leads count:', leads.length);
-  console.log('LeadTable render - all leads:', leads);
-  console.log('LeadTable render - filters:', filters);
+
   
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -51,10 +47,8 @@ const LeadTable = memo(function LeadTable({
   
   // Get filtered leads
   const filteredLeads = useMemo(() => {
-    const filtered = getFilteredLeads(filters);
-    console.log('LeadTable - filtered leads:', filtered);
-    return filtered;
-  }, [getFilteredLeads, filters]);
+    return getFilteredLeads(filters);
+  }, [getFilteredLeads, filters, leads]);
   
   // Sort leads based on current sort field and direction
   const sortedLeads = useMemo(() => {
@@ -97,46 +91,45 @@ const LeadTable = memo(function LeadTable({
     return sortDirection === 'asc' ? ' ↑' : ' ↓';
   }, [sortField, sortDirection]);
   
-  // Format date for display
+  // Format date for display in DD-MM-YYYY format
   const formatDate = useCallback((dateString: string) => {
     if (!dateString) return '';
     
-    // Handle DD-MM-YYYY format
+    // If already in DD-MM-YYYY format, return as is
     if (dateString.match(/^\d{2}-\d{2}-\d{4}$/)) {
-      const [day, month, year] = dateString.split('-');
-      if (day && month && year) {
-        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-        return date.toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric'
-        });
-      }
+      return dateString;
     }
     
-    // Handle other formats
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return dateString; // Return original if invalid
-    
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    // If it's a Date object or ISO string, convert to DD-MM-YYYY
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return dateString; // Return original if invalid
+      
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      
+      return `${day}-${month}-${year}`;
+    } catch {
+      return dateString; // Return original if conversion fails
+    }
   }, []);
   
   // Get status color
   const getStatusColor = useCallback((status: Lead['status']) => {
     switch (status) {
       case 'New': return 'bg-blue-100 text-blue-800';
-      case 'Contacted': return 'bg-purple-100 text-purple-800';
-      case 'In Progress': return 'bg-yellow-100 text-yellow-800';
-      case 'Follow-up': return 'bg-orange-100 text-orange-800';
-      case 'Closed - Won': return 'bg-green-100 text-green-800';
-      case 'Closed - Lost': return 'bg-red-100 text-red-800';
+      case 'CNR': return 'bg-orange-100 text-orange-800';
+      case 'Busy': return 'bg-yellow-100 text-yellow-800';
+      case 'Follow-up': return 'bg-purple-100 text-purple-800';
+      case 'Deal Close': return 'bg-green-100 text-green-800';
+      case 'Work Alloted': return 'bg-indigo-100 text-indigo-800';
+      case 'Hotlead': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   }, []);
+
+
 
 
   
@@ -228,11 +221,6 @@ const LeadTable = memo(function LeadTable({
             >
               Next Follow-up{renderSortIndicator('followUpDate')}
             </th>
-            {onMarkAsDone && (
-              <th scope="col" className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            )}
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
@@ -289,25 +277,11 @@ const LeadTable = memo(function LeadTable({
                 <td className="px-2 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-500">{formatDate(lead.followUpDate)}</div>
                 </td>
-                {onMarkAsDone && (
-                  <td className="px-2 py-4 whitespace-nowrap">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onMarkAsDone(lead.id);
-                      }}
-                      className="px-2 py-1 text-xs bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-                      title="Mark as Done"
-                    >
-                      Done
-                    </button>
-                  </td>
-                )}
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan={onLeadSelection ? (onMarkAsDone ? 9 : 8) : (onMarkAsDone ? 8 : 7)} className="px-6 py-4 text-center text-sm text-gray-500">
+              <td colSpan={onLeadSelection ? 8 : 7} className="px-6 py-4 text-center text-sm text-gray-500">
                 No leads found matching the current filters.
               </td>
             </tr>
@@ -316,6 +290,6 @@ const LeadTable = memo(function LeadTable({
       </table>
     </div>
   );
-});
+}
 
 export default LeadTable;

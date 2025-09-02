@@ -66,7 +66,7 @@ function LeadCard({ lead, onMarkDone, onViewDetails }: { lead: Lead; onMarkDone:
           </div>
           {lead.notes && (
             <p className="text-gray-700 mt-2 text-sm">
-              <span className="font-medium">Notes:</span> {lead.notes}
+              <span className="font-medium">Last Discussion:</span> {lead.notes}
             </p>
           )}
         </div>

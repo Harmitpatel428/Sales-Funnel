@@ -953,7 +953,7 @@ export default function AllLeadsPage() {
                     )}
                     {selectedLead.notes && (
                       <div className="bg-gray-50 p-3 rounded-md">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Last Discussion</label>
                         <p className="text-sm font-medium text-gray-900 line-clamp-3">{selectedLead.notes}</p>
                       </div>
                     )}
@@ -1001,7 +1001,7 @@ Connection Date: ${selectedLead.connectionDate}
 Follow-up Date: ${selectedLead.followUpDate || 'N/A'}
 Last Activity: ${selectedLead.lastActivityDate}
 ${selectedLead.companyLocation ? `Location: ${selectedLead.companyLocation}` : ''}
-${selectedLead.notes ? `Notes: ${selectedLead.notes}` : ''}
+${selectedLead.notes ? `Last Discussion: ${selectedLead.notes}` : ''}
 ${selectedLead.finalConclusion ? `Conclusion: ${selectedLead.finalConclusion}` : ''}`;
                     copyToClipboard(allInfo, 'allInfo');
                   }}

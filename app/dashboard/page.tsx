@@ -7,9 +7,9 @@ import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { leads, addLead, deleteLead, getFilteredLeads, markAsDone } = useLeads();
+  const { leads, addLead, deleteLead, getFilteredLeads, updateLead } = useLeads();
   const [activeFilters, setActiveFilters] = useState<LeadFilters>({
-    status: ['New', 'Contacted', 'In Progress', 'Follow-up'] // Exclude completed leads
+    status: [] // Show no leads by default - user must click a status button to see leads
   });
   const [isImporting, setIsImporting] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -24,18 +24,54 @@ export default function DashboardPage() {
   const [showMassDeleteModal, setShowMassDeleteModal] = useState(false);
   const [leadsToDelete, setLeadsToDelete] = useState<Lead[]>([]);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
 
-  // Debug logging for leads state changes
-  useEffect(() => {
-    console.log('Leads state changed! Current count:', leads.length);
-    console.log('All leads:', leads);
-  }, [leads]);
+
 
   // Reset selectAll state when filters change
   useEffect(() => {
     setSelectAll(false);
     setSelectedLeads(new Set());
   }, [activeFilters]);
+  
+  // Auto-clear status filter when leads are updated to ensure leads disappear when status changes
+  useEffect(() => {
+    if (activeFilters.status && activeFilters.status.length > 0) {
+      // Check if any leads with the current status still exist
+      const filteredLeads = getFilteredLeads(activeFilters);
+      if (filteredLeads.length === 0) {
+        // If no leads match the current status filter, clear the filter
+        setActiveFilters(prev => ({
+          ...prev,
+          status: [] // Clear status filter to show "no status selected" message
+        }));
+      }
+    }
+  }, [leads, activeFilters.status, getFilteredLeads]);
+
+  // Handle return from edit page - refresh the view
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Clear any stored editing data when leaving the page
+      localStorage.removeItem('editingLead');
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+
+  // Check for lead update notification
+  useEffect(() => {
+    const leadUpdated = localStorage.getItem('leadUpdated');
+    if (leadUpdated === 'true') {
+      showToastNotification('Lead updated successfully! The lead has been removed from the main dashboard view but can be viewed by clicking on the status buttons.', 'success');
+      localStorage.removeItem('leadUpdated');
+    }
+  }, []);
   
   // Helper function to parse DD-MM-YYYY format dates
   const parseFollowUpDate = (dateString: string): Date | null => {
@@ -54,6 +90,30 @@ export default function DashboardPage() {
       return new Date(dateString);
     } catch {
       return null;
+    }
+  };
+
+  // Helper function to format date to DD-MM-YYYY
+  const formatDateToDDMMYYYY = (dateString: string): string => {
+    if (!dateString) return '';
+    
+    // If already in DD-MM-YYYY format, return as is
+    if (dateString.match(/^\d{2}-\d{2}-\d{4}$/)) {
+      return dateString;
+    }
+    
+    // If it's a Date object or ISO string, convert to DD-MM-YYYY
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return dateString; // Return original if invalid
+      
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      
+      return `${day}-${month}-${year}`;
+    } catch {
+      return dateString; // Return original if conversion fails
     }
   };
   
@@ -99,6 +159,27 @@ export default function DashboardPage() {
     };
   }, [leads]);
 
+  // Calculate status counts with memoization
+  const statusCounts = useMemo(() => {
+    const counts = {
+      'New': 0,
+      'CNR': 0,
+      'Busy': 0,
+      'Follow-up': 0,
+      'Deal Close': 0,
+      'Work Alloted': 0,
+      'Hotlead': 0
+    };
+
+    leads.forEach(lead => {
+      if (!lead.isDone && !lead.isDeleted && lead.status in counts) {
+        counts[lead.status as keyof typeof counts]++;
+      }
+    });
+
+    return counts;
+  }, [leads]);
+
   const { totalLeads, dueToday, upcoming, overdue, followUpMandate } = summaryStats;
 
 
@@ -122,10 +203,16 @@ export default function DashboardPage() {
     }
   };
 
-  // Handle marking lead as done - removes from dashboard table
-  const handleMarkAsDone = (leadId: string) => {
-    markAsDone(leadId);
-    // Lead will automatically be removed from dashboard due to status filter
+  // Show toast notification
+  const showToastNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      setShowToast(false);
+    }, 3000);
   };
 
 
@@ -478,11 +565,22 @@ export default function DashboardPage() {
       case 'lead status':
         // Map your status values to valid enum values
         const statusValue = String(value).toLowerCase();
-        if (statusValue === 'new' || statusValue === 'contacted' || statusValue === 'in progress' || 
-            statusValue === 'follow-up' || statusValue === 'closed - won' || statusValue === 'closed - lost') {
-          lead.status = String(value) as Lead['status'];
+        if (statusValue === 'new') {
+          lead.status = 'New';
+        } else if (statusValue === 'cnr') {
+          lead.status = 'CNR';
+        } else if (statusValue === 'busy') {
+          lead.status = 'Busy';
+        } else if (statusValue === 'follow-up' || statusValue === 'follow up') {
+          lead.status = 'Follow-up';
+        } else if (statusValue === 'deal close' || statusValue === 'dealclose') {
+          lead.status = 'Deal Close';
+        } else if (statusValue === 'work alloted' || statusValue === 'workalloted') {
+          lead.status = 'Work Alloted';
+        } else if (statusValue === 'hotlead' || statusValue === 'hot lead') {
+          lead.status = 'Hotlead';
         } else if (statusValue.includes('year') || statusValue.includes('exp') || statusValue.includes('service')) {
-          lead.status = 'In Progress'; // Map old/existing connections to "In Progress"
+          lead.status = 'Busy'; // Map old/existing connections to "Busy"
         } else {
           lead.status = 'New';
         }
@@ -654,6 +752,7 @@ export default function DashboardPage() {
       notes: cleanNotes || '',
       isDone: lead.isDone || false,
       isDeleted: lead.isDeleted || false,
+      isUpdated: lead.isUpdated || false,
       activities: lead.activities || [],
       mandateStatus: lead.mandateStatus || 'Pending',
       documentStatus: lead.documentStatus || 'Pending Documents'
@@ -706,6 +805,7 @@ export default function DashboardPage() {
           notes: leadData.notes || '',
           isDone: leadData.isDone || false,
           isDeleted: leadData.isDeleted || false,
+          isUpdated: false,
           mandateStatus: leadData.mandateStatus || 'Pending',
           documentStatus: leadData.documentStatus || 'Pending Documents'
         };
@@ -919,7 +1019,19 @@ export default function DashboardPage() {
   // Clear all filters
   const clearAllFilters = () => {
     setSearchTerm('');
-    setActiveFilters({});
+    setActiveFilters({
+      status: [] // Clear to show no leads - user must select a status
+    });
+    setSelectedLeads(new Set());
+    setSelectAll(false);
+  };
+
+  // Handle status filter
+  const handleStatusFilter = (status: Lead['status']) => {
+    setActiveFilters(prev => ({
+      ...prev,
+      status: [status]
+    }));
     setSelectedLeads(new Set());
     setSelectAll(false);
   };
@@ -965,6 +1077,27 @@ export default function DashboardPage() {
     setShowMassDeleteModal(true);
   };
 
+  // Bulk update status for selected leads
+  const handleBulkStatusUpdate = (newStatus: Lead['status']) => {
+    if (selectedLeads.size === 0) return;
+    
+    const filteredLeads = getFilteredLeads(activeFilters);
+    const selectedLeadObjects = filteredLeads.filter(lead => selectedLeads.has(lead.id));
+    
+    // Update each selected lead's status
+    selectedLeadObjects.forEach(lead => {
+      const updatedLead = { ...lead, status: newStatus };
+      updateLead(updatedLead);
+    });
+    
+    // Show notification
+    showToastNotification(`${selectedLeads.size} lead(s) status updated to "${newStatus}" and removed from main dashboard view`, 'success');
+    
+    // Clear selection
+    setSelectedLeads(new Set());
+    setSelectAll(false);
+  };
+
   // Clear selection
   const clearSelection = () => {
     setSelectedLeads(new Set());
@@ -975,8 +1108,8 @@ export default function DashboardPage() {
   const handleEditLead = (lead: Lead) => {
     // Store the lead data in localStorage for editing
     localStorage.setItem('editingLead', JSON.stringify(lead));
-    // Navigate to add-lead page
-    router.push('/add-lead?mode=edit');
+    // Navigate to add-lead page with a flag to indicate we're editing
+    router.push('/add-lead?mode=edit&from=dashboard');
   };
 
 
@@ -1015,6 +1148,7 @@ export default function DashboardPage() {
                 notes: 'This is a test lead for testing purposes',
                 isDone: false,
                 isDeleted: false,
+                isUpdated: false,
                 mandateStatus: 'Pending',
                 documentStatus: 'Pending Documents'
               };
@@ -1050,36 +1184,22 @@ export default function DashboardPage() {
       <div className="bg-white p-4 rounded-lg shadow-md mb-6">
         <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
           {/* Search Section */}
-          <div className="flex-1 flex gap-2 max-w-md relative">
-            <div className="flex-1 relative">
+          <div className="flex items-center gap-2 max-w-sm relative">
+            <div className="relative">
               <input
                 type="text"
-                placeholder="Search by KVA, Phone, Contact Name, Consumer No., Company, Client Name, or Date"
+                placeholder="Search leads..."
                 value={searchTerm}
                 onChange={handleSearchInputChange}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                 onFocus={() => searchTerm.length >= 2 && setShowSuggestions(true)}
                 onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-black placeholder-gray-500"
+                className="w-64 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-black placeholder-gray-500 text-sm"
               />
-              
-              {/* Search Tips */}
-              {searchTerm.length === 1 && (
-                <div className="absolute top-full left-0 right-0 bg-blue-50 border border-blue-200 rounded-lg shadow-lg z-40 p-3 mt-1">
-                  <div className="text-xs text-blue-800">
-                    <div className="font-medium mb-1">Search examples:</div>
-                    <div>• Phone: 9876543210</div>
-                    <div>• Contact: John Doe</div>
-                    <div>• Company: Evaan Metal</div>
-                    <div>• Consumer No: 66481</div>
-                    <div>• Client: Vikram</div>
-                  </div>
-                </div>
-              )}
               
               {/* Search Suggestions Dropdown */}
               {showSuggestions && searchSuggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto">
+                <div className="absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
                   {searchSuggestions.map((lead) => {
                     // Determine what field matched for highlighting
                     const queryLower = searchTerm.toLowerCase();
@@ -1119,26 +1239,15 @@ export default function DashboardPage() {
                       <div
                         key={lead.id}
                         onClick={() => handleSuggestionClick(lead)}
-                        className="px-4 py-3 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0 text-sm"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
                             <div className="font-medium text-gray-900">{lead.kva}</div>
-                            <div className="text-sm text-gray-600">{lead.company}</div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              {lead.clientName} • {(() => {
-                                const mainMobile = lead.mobileNumbers?.find(m => m.isMain);
-                                if (mainMobile) {
-                                  const contactName = mainMobile.name || (mainMobile.isMain ? lead.clientName : '');
-                                  return contactName ? `${contactName} - ${mainMobile.number?.replace(/-/g, '')}` : mainMobile.number?.replace(/-/g, '');
-                                }
-                                return lead.mobileNumber?.replace(/-/g, '');
-                              })()} • {lead.consumerNumber}
-                              {lead.companyLocation && <span> • {lead.companyLocation}</span>}
-                            </div>
+                            <div className="text-xs text-gray-600">{lead.company} • {lead.clientName}</div>
                           </div>
-                          <div className="ml-3">
-                            <span className="inline-flex px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                          <div className="ml-2">
+                            <span className="inline-flex px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
                               {matchType}
                             </span>
                           </div>
@@ -1152,7 +1261,7 @@ export default function DashboardPage() {
             
             <button
               onClick={handleSearch}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
             >
               Search
             </button>
@@ -1160,46 +1269,152 @@ export default function DashboardPage() {
             {activeFilters.searchTerm && (
               <button
                 onClick={clearSearch}
-                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                className="px-3 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm"
               >
                 Clear
               </button>
             )}
           </div>
 
-          {/* Status Filter */}
-          <div className="flex items-center gap-2">
-            <label htmlFor="status-filter" className="text-sm font-medium text-gray-700">
-              Status:
-            </label>
-            <select
-              id="status-filter"
-              value={activeFilters.status?.[0] || ''}
-              onChange={(e) => {
-                const status = e.target.value;
-                setActiveFilters(prev => ({
-                  ...prev,
-                  status: status ? [status as Lead['status']] : []
-                }));
-              }}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-black"
-            >
-              <option value="">All Statuses</option>
-              <option value="New">New</option>
-              <option value="Contacted">Contacted</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Follow-up">Follow-up</option>
-              <option value="Closed - Won">Closed - Won</option>
-              <option value="Closed - Lost">Closed - Lost</option>
-            </select>
-            {(activeFilters.searchTerm || activeFilters.status) && (
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {activeFilters.searchTerm && (
               <button
                 onClick={clearAllFilters}
                 className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
               >
-                Clear All Filters
+                Clear Search
               </button>
             )}
+          </div>
+
+          {/* Status Filter Buttons */}
+          <div className="bg-white p-4 rounded-lg shadow-md mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold text-gray-800">Filter by Status</h3>
+              <span className="text-sm text-gray-500">Click any status to filter leads</span>
+            </div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                onClick={() => handleStatusFilter('New')}
+                className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2 ${
+                  activeFilters.status?.length === 1 && activeFilters.status[0] === 'New'
+                    ? 'bg-blue-800 text-white'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+              >
+                New
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                  activeFilters.status?.length === 1 && activeFilters.status[0] === 'New'
+                    ? 'bg-blue-900 text-blue-100'
+                    : 'bg-blue-500 text-white'
+                }`}>
+                  {statusCounts['New']}
+                </span>
+              </button>
+              <button
+                onClick={() => handleStatusFilter('CNR')}
+                className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2 ${
+                  activeFilters.status?.length === 1 && activeFilters.status[0] === 'CNR'
+                    ? 'bg-orange-800 text-white'
+                    : 'bg-orange-600 hover:bg-orange-700 text-white'
+                }`}
+              >
+                CNR
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                  activeFilters.status?.length === 1 && activeFilters.status[0] === 'CNR'
+                    ? 'bg-orange-900 text-orange-100'
+                    : 'bg-orange-500 text-white'
+                }`}>
+                  {statusCounts['CNR']}
+                </span>
+              </button>
+              <button
+                onClick={() => handleStatusFilter('Busy')}
+                className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2 ${
+                  activeFilters.status?.length === 1 && activeFilters.status[0] === 'Busy'
+                    ? 'bg-yellow-800 text-white'
+                    : 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                }`}
+              >
+                Busy
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                  activeFilters.status?.length === 1 && activeFilters.status[0] === 'Busy'
+                    ? 'bg-yellow-900 text-yellow-100'
+                    : 'bg-yellow-500 text-white'
+                }`}>
+                  {statusCounts['Busy']}
+                </span>
+              </button>
+              <button
+                onClick={() => handleStatusFilter('Follow-up')}
+                className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2 ${
+                  activeFilters.status?.length === 1 && activeFilters.status[0] === 'Follow-up'
+                    ? 'bg-purple-800 text-white'
+                    : 'bg-purple-600 hover:bg-purple-700 text-white'
+                }`}
+              >
+                Follow-up
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                  activeFilters.status?.length === 1 && activeFilters.status[0] === 'Follow-up'
+                    ? 'bg-purple-900 text-purple-100'
+                    : 'bg-purple-500 text-white'
+                }`}>
+                  {statusCounts['Follow-up']}
+                </span>
+              </button>
+              <button
+                onClick={() => handleStatusFilter('Deal Close')}
+                className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2 ${
+                  activeFilters.status?.length === 1 && activeFilters.status[0] === 'Deal Close'
+                    ? 'bg-green-800 text-white'
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                }`}
+              >
+                Deal Close
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                  activeFilters.status?.length === 1 && activeFilters.status[0] === 'Deal Close'
+                    ? 'bg-green-900 text-green-100'
+                    : 'bg-green-500 text-white'
+                }`}>
+                  {statusCounts['Deal Close']}
+                </span>
+              </button>
+              <button
+                onClick={() => handleStatusFilter('Work Alloted')}
+                className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2 ${
+                  activeFilters.status?.length === 1 && activeFilters.status[0] === 'Work Alloted'
+                    ? 'bg-indigo-800 text-white'
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                }`}
+              >
+                Work Alloted
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                  activeFilters.status?.length === 1 && activeFilters.status[0] === 'Work Alloted'
+                    ? 'bg-indigo-900 text-indigo-100'
+                    : 'bg-indigo-500 text-white'
+                }`}>
+                  {statusCounts['Work Alloted']}
+                </span>
+              </button>
+              <button
+                onClick={() => handleStatusFilter('Hotlead')}
+                className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2 ${
+                  activeFilters.status?.length === 1 && activeFilters.status[0] === 'Hotlead'
+                    ? 'bg-red-800 text-white'
+                    : 'bg-red-600 hover:bg-red-700 text-white'
+                }`}
+              >
+                Hotlead
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                  activeFilters.status?.length === 1 && activeFilters.status[0] === 'Hotlead'
+                    ? 'bg-red-900 text-red-100'
+                    : 'bg-red-500 text-white'
+                }`}>
+                  {statusCounts['Hotlead']}
+                </span>
+              </button>
+            </div>
           </div>
 
           {/* Bulk Actions */}
@@ -1221,6 +1436,26 @@ export default function DashboardPage() {
                 <span className="text-sm text-gray-600">
                   {selectedLeads.size} lead(s) selected
                 </span>
+                <select
+                  onChange={(e) => {
+                    const newStatus = e.target.value as Lead['status'];
+                    if (newStatus) {
+                      handleBulkStatusUpdate(newStatus);
+                    }
+                  }}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  defaultValue=""
+                  aria-label="Update status for selected leads"
+                >
+                  <option value="" disabled>Update Status</option>
+                  <option value="New">New</option>
+                  <option value="CNR">CNR</option>
+                  <option value="Busy">Busy</option>
+                  <option value="Follow-up">Follow-up</option>
+                  <option value="Deal Close">Deal Close</option>
+                  <option value="Work Alloted">Work Alloted</option>
+                  <option value="Hotlead">Hotlead</option>
+                </select>
                 <button
                   onClick={handleBulkDelete}
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
@@ -1239,19 +1474,15 @@ export default function DashboardPage() {
         </div>
       </div>  
 
-      {/* Search Results Summary */}
-      {(activeFilters.searchTerm || activeFilters.status) && (
+      {/* Status Filter Indicator */}
+      {activeFilters.status && activeFilters.status.length === 1 ? (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-blue-800">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
               </svg>
-              <span className="font-medium">
-                {activeFilters.searchTerm && `Search: "${activeFilters.searchTerm}"`}
-                {activeFilters.searchTerm && activeFilters.status && ' • '}
-                {activeFilters.status && `Status: ${activeFilters.status[0]}`}
-              </span>
+              <span className="font-medium">Status: {activeFilters.status[0]}</span>
             </div>
             <button
               onClick={clearAllFilters}
@@ -1261,9 +1492,18 @@ export default function DashboardPage() {
             </button>
           </div>
         </div>
+      ) : (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-gray-600">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+              </svg>
+              <span className="font-medium">No status selected - Click a status button to view leads (including updated ones)</span>
+            </div>
+          </div>
+        </div>
       )}
-      
-
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
@@ -1315,8 +1555,6 @@ export default function DashboardPage() {
         onLeadSelection={handleLeadSelection}
         selectAll={selectAll}
         onSelectAll={handleSelectAll}
-          onMarkAsDone={handleMarkAsDone}
-        key={leads.length}
       />
       </div>
 
@@ -1469,11 +1707,13 @@ export default function DashboardPage() {
                     <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                           selectedLead.status === 'New' ? 'bg-blue-100 text-blue-800' :
-                          selectedLead.status === 'Contacted' ? 'bg-purple-100 text-purple-800' :
-                          selectedLead.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' :
-                          selectedLead.status === 'Follow-up' ? 'bg-orange-100 text-orange-800' :
-                          selectedLead.status === 'Closed - Won' ? 'bg-green-100 text-green-800' :
-                          'bg-red-100 text-red-800'
+                          selectedLead.status === 'CNR' ? 'bg-orange-100 text-orange-800' :
+                          selectedLead.status === 'Busy' ? 'bg-yellow-100 text-yellow-800' :
+                          selectedLead.status === 'Follow-up' ? 'bg-purple-100 text-purple-800' :
+                          selectedLead.status === 'Deal Close' ? 'bg-green-100 text-green-800' :
+                          selectedLead.status === 'Work Alloted' ? 'bg-indigo-100 text-indigo-800' :
+                          selectedLead.status === 'Hotlead' ? 'bg-red-100 text-red-800' :
+                          'bg-gray-100 text-gray-800'
                         }`}>
                           {selectedLead.status}
                         </span>
@@ -1494,25 +1734,18 @@ export default function DashboardPage() {
                   {/* Dates */}
                   <div className="bg-gray-50 p-3 rounded-md">
                     <label className="block text-xs font-medium text-gray-600 mb-1">Connection Date</label>
-                    <p className="text-sm font-medium text-gray-900">{selectedLead.connectionDate}</p>
+                    <p className="text-sm font-medium text-gray-900">{formatDateToDDMMYYYY(selectedLead.connectionDate)}</p>
                   </div>
                   <div className="bg-gray-50 p-3 rounded-md">
                     <label className="block text-xs font-medium text-gray-600 mb-1">Follow-up Date</label>
                     <p className="text-sm font-medium text-gray-900">
-                          {selectedLead.followUpDate ? (() => {
-                        // Convert yyyy-mm-dd to dd-mm-yyyy
-                              const dateParts = selectedLead.followUpDate.split('-');
-                        if (dateParts.length === 3) {
-                          return `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
-                        }
-                        return selectedLead.followUpDate;
-                      })() : 'N/A'}
-                        </p>
-                      </div>
+                      {selectedLead.followUpDate ? formatDateToDDMMYYYY(selectedLead.followUpDate) : 'N/A'}
+                    </p>
+                  </div>
                   <div className="bg-gray-50 p-3 rounded-md">
                     <label className="block text-xs font-medium text-gray-600 mb-1">Last Activity</label>
-                    <p className="text-sm font-medium text-gray-900">{selectedLead.lastActivityDate}</p>
-                    </div>
+                    <p className="text-sm font-medium text-gray-900">{formatDateToDDMMYYYY(selectedLead.lastActivityDate)}</p>
+                  </div>
                   
                   {/* Mandate & Document Status */}
                   {selectedLead.mandateStatus && (
@@ -1567,7 +1800,7 @@ export default function DashboardPage() {
                     )}
                     {selectedLead.notes && (
                       <div className="bg-gray-50 p-3 rounded-md">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Last Discussion</label>
                         <p className="text-sm font-medium text-gray-900 line-clamp-3">{selectedLead.notes}</p>
                     </div>
                     )}
@@ -1611,11 +1844,11 @@ Phone: ${selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0
   : selectedLead.mobileNumber || 'N/A'}
 Status: ${selectedLead.status}
 Unit Type: ${selectedLead.unitType}
-Connection Date: ${selectedLead.connectionDate}
-Follow-up Date: ${selectedLead.followUpDate || 'N/A'}
-Last Activity: ${selectedLead.lastActivityDate}
+Connection Date: ${formatDateToDDMMYYYY(selectedLead.connectionDate)}
+Follow-up Date: ${selectedLead.followUpDate ? formatDateToDDMMYYYY(selectedLead.followUpDate) : 'N/A'}
+Last Activity: ${formatDateToDDMMYYYY(selectedLead.lastActivityDate)}
 ${selectedLead.companyLocation ? `Location: ${selectedLead.companyLocation}` : ''}
-${selectedLead.notes ? `Notes: ${selectedLead.notes}` : ''}
+${selectedLead.notes ? `Last Discussion: ${selectedLead.notes}` : ''}
 ${selectedLead.finalConclusion ? `Conclusion: ${selectedLead.finalConclusion}` : ''}`;
                     copyToClipboard(allInfo, 'allInfo');
                   }}
@@ -1653,16 +1886,6 @@ ${selectedLead.finalConclusion ? `Conclusion: ${selectedLead.finalConclusion}` :
                     className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
                 Edit Lead
-              </button>
-                  <button
-                    onClick={() => {
-                      handleMarkAsDone(selectedLead.id);
-                      setShowLeadModal(false);
-                      document.body.style.overflow = 'unset';
-                    }}
-                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors"
-                  >
-                    Mark as Done
               </button>
               <button
                 onClick={() => {
@@ -1854,6 +2077,46 @@ ${selectedLead.finalConclusion ? `Conclusion: ${selectedLead.finalConclusion}` :
           </div>
         </div>
       )}
+
+      {/* Toast Notification */}
+      {showToast && (
+        <div className="fixed top-4 right-4 z-50">
+          <div className={`px-6 py-4 rounded-lg shadow-lg text-white font-medium ${
+            toastType === 'success' ? 'bg-green-600' :
+            toastType === 'error' ? 'bg-red-600' :
+            'bg-blue-600'
+          }`}>
+            <div className="flex items-center space-x-3">
+              {toastType === 'success' && (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+              {toastType === 'error' && (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              )}
+              {toastType === 'info' && (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+              <span>{toastMessage}</span>
+              <button
+                onClick={() => setShowToast(false)}
+                className="ml-4 text-white hover:text-gray-200"
+                aria-label="Close notification"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
