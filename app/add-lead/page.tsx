@@ -33,6 +33,7 @@ export default function AddLeadPage() {
   const [errors, setErrors] = useState<Partial<Record<keyof typeof formData, string>>>({});
   const [isEditMode, setIsEditMode] = useState<boolean>(false);
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   // Extract address from notes helper function
   const extractAddressFromNotes = (notes: string) => {
@@ -109,6 +110,8 @@ export default function AddLeadPage() {
         }
       }
     }
+    
+    setIsHydrated(true);
   }, []);
 
   // Generate UUID function

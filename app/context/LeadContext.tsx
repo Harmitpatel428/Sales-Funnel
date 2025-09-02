@@ -72,6 +72,7 @@ const LeadContext = createContext<LeadContextType | undefined>(undefined);
 export function LeadProvider({ children }: { children: ReactNode }) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [savedViews, setSavedViews] = useState<SavedView[]>([]);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   // Load leads from localStorage
   useEffect(() => {
@@ -87,26 +88,32 @@ export function LeadProvider({ children }: { children: ReactNode }) {
       }
     } catch (err) {
       console.error('Error loading data:', err);
+    } finally {
+      setIsHydrated(true);
     }
   }, []);
 
-  // Save leads to localStorage whenever they change (debounced)
+    // Save leads to localStorage whenever they change (debounced)
   useEffect(() => {
+    if (!isHydrated) return;
+    
     const timeoutId = setTimeout(() => {
       localStorage.setItem('leads', JSON.stringify(leads));
     }, 300); // Debounce by 300ms
     
     return () => clearTimeout(timeoutId);
-  }, [leads]);
-  
+  }, [leads, isHydrated]);
+
   // Save views to localStorage whenever they change (debounced)
   useEffect(() => {
+    if (!isHydrated) return;
+    
     const timeoutId = setTimeout(() => {
       localStorage.setItem('savedViews', JSON.stringify(savedViews));
     }, 300); // Debounce by 300ms
     
     return () => clearTimeout(timeoutId);
-  }, [savedViews]);
+  }, [savedViews, isHydrated]);
 
   const addLead = (lead: Lead) => {
     console.log('Adding lead:', lead);
@@ -238,7 +245,13 @@ export function LeadProvider({ children }: { children: ReactNode }) {
       addSavedView,
       deleteSavedView
     }}>
-      {children}
+      {!isHydrated ? (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+        </div>
+      ) : (
+        children
+      )}
     </LeadContext.Provider>
   );
 }
