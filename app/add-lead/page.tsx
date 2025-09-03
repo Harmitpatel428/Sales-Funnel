@@ -10,6 +10,7 @@ export default function AddLeadPage() {
   
   // Track where the user came from
   const [cameFromHome, setCameFromHome] = useState(false);
+  const [sourcePage, setSourcePage] = useState<string>('');
   
   const [formData, setFormData] = useState({
     kva: '',
@@ -72,6 +73,11 @@ export default function AddLeadPage() {
     // Check if user came from home page
     if (from === 'home') {
       setCameFromHome(true);
+    }
+    
+    // Store source page for navigation back
+    if (from) {
+      setSourcePage(from);
     }
     
     if (mode === 'edit') {
@@ -360,6 +366,18 @@ export default function AddLeadPage() {
         // Navigate back to appropriate page
         if (cameFromHome) {
           router.push('/');
+        } else if (sourcePage) {
+          // Navigate back to the specific source page with proper route mapping
+          const routeMap: { [key: string]: string } = {
+            'documentation': '/follow-up-mandate?tab=pending',
+            'mandate-sent': '/follow-up-mandate?tab=signed',
+            'due-today': '/due-today',
+            'upcoming': '/upcoming',
+            'all-leads': '/all-leads',
+            'dashboard': '/dashboard'
+          };
+          const targetRoute = routeMap[sourcePage] || '/dashboard';
+          router.push(targetRoute);
         } else {
           // Add a flag to indicate successful update
           localStorage.setItem('leadUpdated', 'true');
@@ -404,7 +422,7 @@ export default function AddLeadPage() {
           isUpdated: false,
           mandateStatus: 'Pending',
           documentStatus: formData.status === 'Mandate Sent' ? 'Signed Mandate' : 
-                         formData.status === 'Documentation' ? 'Pending Documents' : undefined,
+                         formData.status === 'Documentation' ? 'Pending Documents' : 'Pending Documents',
           activities: [{
             id: generateId(),
             leadId: leadId,
@@ -442,7 +460,23 @@ export default function AddLeadPage() {
         });
         
         // Navigate back to appropriate page
-        router.push(cameFromHome ? '/' : '/dashboard');
+        if (cameFromHome) {
+          router.push('/');
+        } else if (sourcePage) {
+          // Navigate back to the specific source page with proper route mapping
+          const routeMap: { [key: string]: string } = {
+            'documentation': '/follow-up-mandate?tab=pending',
+            'mandate-sent': '/follow-up-mandate?tab=signed',
+            'due-today': '/due-today',
+            'upcoming': '/upcoming',
+            'all-leads': '/all-leads',
+            'dashboard': '/dashboard'
+          };
+          const targetRoute = routeMap[sourcePage] || '/dashboard';
+          router.push(targetRoute);
+        } else {
+          router.push('/dashboard');
+        }
       }
       
     } catch (error) {
@@ -459,7 +493,23 @@ export default function AddLeadPage() {
       localStorage.removeItem('editingLead');
     }
     // Navigate back to appropriate page
-    router.push(cameFromHome ? '/' : '/dashboard');
+    if (cameFromHome) {
+      router.push('/');
+    } else if (sourcePage) {
+      // Navigate back to the specific source page with proper route mapping
+      const routeMap: { [key: string]: string } = {
+        'documentation': '/follow-up-mandate?tab=pending',
+        'mandate-sent': '/follow-up-mandate?tab=signed',
+        'due-today': '/due-today',
+        'upcoming': '/upcoming',
+        'all-leads': '/all-leads',
+        'dashboard': '/dashboard'
+      };
+      const targetRoute = routeMap[sourcePage] || '/dashboard';
+      router.push(targetRoute);
+    } else {
+      router.push('/dashboard');
+    }
   };
 
   // Show loading state during hydration

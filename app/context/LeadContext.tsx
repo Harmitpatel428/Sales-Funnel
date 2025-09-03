@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
@@ -194,6 +194,14 @@ export function LeadProvider({ children }: { children: ReactNode }) {
       // Filter out completed leads (isDone: true)
       if (lead.isDone) {
         return false;
+      }
+      
+      // For main dashboard (no status filter), only show leads that are NOT updated
+      // This ensures updated leads are removed from the main dashboard view
+      if (!filters.status || filters.status.length === 0) {
+        if (lead.isUpdated) {
+          return false; // Hide updated leads from main dashboard
+        }
       }
       
       // Filter by status

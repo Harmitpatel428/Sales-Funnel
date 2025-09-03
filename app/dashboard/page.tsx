@@ -1,6 +1,6 @@
-'use client';
+﻿'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useLeads, Lead, LeadFilters, MobileNumber } from '../context/LeadContext';
 import LeadTable from '../components/LeadTable';
 import { useRouter } from 'next/navigation';
@@ -30,13 +30,28 @@ export default function DashboardPage() {
   const [showEmptyStatusNotification, setShowEmptyStatusNotification] = useState(false);
   const [emptyStatusMessage, setEmptyStatusMessage] = useState('');
 
+  // Create a stable reference for activeFilters to prevent infinite loops
+  const activeFiltersKey = useMemo(() => {
+    return `${activeFilters.status?.join(',') || 'none'}-${activeFilters.searchTerm || 'none'}`;
+  }, [activeFilters.status, activeFilters.searchTerm]);
 
+  // Show toast notification
+  const showToastNotification = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToastMessage(message);
+    setToastType(type);
+    setShowToast(true);
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+      setShowToast(false);
+    }, 3000);
+  }, []);
 
   // Reset selectAll state when filters change
   useEffect(() => {
     setSelectAll(false);
     setSelectedLeads(new Set());
-  }, [activeFilters]);
+  }, [activeFiltersKey]);
   
   // Auto-clear status filter when leads are updated to ensure leads disappear when status changes
   useEffect(() => {
@@ -73,7 +88,21 @@ export default function DashboardPage() {
       showToastNotification('Lead updated successfully! The lead has been removed from the main dashboard view but can be viewed by clicking on the status buttons.', 'success');
       localStorage.removeItem('leadUpdated');
     }
-  }, []);
+  }, [showToastNotification]);
+
+  // Check for updated leads and clear main dashboard view if needed
+  useEffect(() => {
+    // Check if there are any leads marked as updated
+    const hasUpdatedLeads = leads.some(lead => lead.isUpdated && !lead.isDeleted && !lead.isDone);
+    
+    // Only clear the main dashboard view if we're on main dashboard (no status filter) 
+    // and there are updated leads, but DON'T clear if user has manually selected a status
+    if (hasUpdatedLeads && (!activeFilters.status || activeFilters.status.length === 0)) {
+      // This ensures updated leads are removed from the main dashboard view
+      // but allows users to still click status buttons to see updated leads
+      console.log('Clearing main dashboard view due to updated leads');
+    }
+  }, [leads.length, activeFiltersKey]);
   
   // Helper function to parse DD-MM-YYYY format dates
   const parseFollowUpDate = (dateString: string): Date | null => {
@@ -166,7 +195,7 @@ export default function DashboardPage() {
     };
   }, [leads]);
 
-  // Calculate status counts with memoization
+  // Calculate status counts with memoization - include ALL leads (including updated ones)
   const statusCounts = useMemo(() => {
     const counts = {
       'New': 0,
@@ -189,7 +218,7 @@ export default function DashboardPage() {
     return counts;
   }, [leads]);
 
-  const { totalLeads, dueToday, upcoming, overdue, followUpMandate } = summaryStats;
+  const { dueToday, upcoming, overdue, followUpMandate } = summaryStats;
 
 
   
@@ -211,20 +240,6 @@ export default function DashboardPage() {
       console.error('Failed to copy text: ', err);
     }
   };
-
-  // Show toast notification
-  const showToastNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
-    setToastMessage(message);
-    setToastType(type);
-    setShowToast(true);
-    
-    // Auto-hide after 3 seconds
-    setTimeout(() => {
-      setShowToast(false);
-    }, 3000);
-  };
-
-
 
   // Handle Excel/CSV import
   const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -1048,6 +1063,7 @@ export default function DashboardPage() {
       return;
     }
     
+    // Set the status filter - this will show leads with this status (including updated ones)
     setActiveFilters(prev => ({
       ...prev,
       status: [status]
@@ -1129,7 +1145,7 @@ export default function DashboardPage() {
     // Store the lead data in localStorage for editing
     localStorage.setItem('editingLead', JSON.stringify(lead));
     // Navigate to add-lead page with a flag to indicate we're editing
-    router.push('/add-lead?mode=edit&from=dashboard');
+    router.push(`/add-lead?mode=edit&id=${lead.id}&from=dashboard`);
   };
 
 
@@ -1264,7 +1280,7 @@ export default function DashboardPage() {
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
                             <div className="font-medium text-gray-900">{lead.kva}</div>
-                            <div className="text-xs text-gray-600">{lead.company} • {lead.clientName}</div>
+                            <div className="text-xs text-gray-600">{lead.company} ΓÇó {lead.clientName}</div>
                           </div>
                           <div className="ml-2">
                             <span className="inline-flex px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">

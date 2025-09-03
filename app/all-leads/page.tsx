@@ -365,7 +365,7 @@ export default function AllLeadsPage() {
             onClick={(e) => {
               e.stopPropagation();
               localStorage.setItem('editingLead', JSON.stringify(lead));
-              router.push(`/add-lead?mode=edit&id=${lead.id}`);
+              router.push(`/add-lead?mode=edit&id=${lead.id}&from=all-leads`);
             }}
             className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-md transition-colors"
           >
@@ -946,7 +946,7 @@ ${selectedLead.finalConclusion ? `Conclusion: ${selectedLead.finalConclusion}` :
                         // Store the lead data in localStorage for the edit form
                         localStorage.setItem('editingLead', JSON.stringify(selectedLead));
                         closeModal();
-                        router.push(`/add-lead?mode=edit&id=${selectedLead.id}`);
+                        router.push(`/add-lead?mode=edit&id=${selectedLead.id}&from=all-leads`);
                       }}
                       className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                     >

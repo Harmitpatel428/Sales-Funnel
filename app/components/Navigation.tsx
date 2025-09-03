@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -70,7 +70,7 @@ const Navigation = memo(function Navigation() {
               })}
             </div>
             <div className="text-lg font-bold text-gray-800 flex items-center justify-center space-x-1">
-              <span className="animate-pulse">🕐</span>
+              <span className="animate-pulse">≡ƒòÉ</span>
               <span>
                 {currentDateTime.toLocaleTimeString('en-US', {
                   hour12: true,
