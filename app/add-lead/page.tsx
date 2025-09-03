@@ -254,9 +254,12 @@ export default function AddLeadPage() {
     if (name === 'notes') {
       const { address, cleanNotes } = extractAddressFromNotes(value);
       
+      // Auto-capitalize the first letter of the notes
+      const capitalizedNotes = cleanNotes.charAt(0).toUpperCase() + cleanNotes.slice(1);
+      
       setFormData(prev => ({
         ...prev,
-        [name]: cleanNotes, // Use clean notes without address
+        [name]: capitalizedNotes, // Use capitalized clean notes without address
         companyLocation: address || prev.companyLocation // Set address if found, otherwise keep existing
       }));
     } else {
@@ -278,9 +281,12 @@ export default function AddLeadPage() {
 
   // Handle suggestion insertion for notes
   const handleSuggestionClick = (suggestion: string) => {
+    // Auto-capitalize the first letter of the suggestion
+    const capitalizedSuggestion = suggestion.charAt(0).toUpperCase() + suggestion.slice(1);
+    
     setFormData(prev => ({
       ...prev,
-      notes: suggestion
+      notes: capitalizedSuggestion
     }));
 
     // Clear error for notes field
@@ -769,7 +775,7 @@ export default function AddLeadPage() {
             <div className="space-y-2">
               <label htmlFor="followUpDate" className="block text-sm font-medium text-gray-700">
                 Next Follow-up Date
-                {['Follow-up', 'Hotlead', 'Mandate Sent', 'Documentation'].includes(formData.status) && (
+                {['Follow-up', 'Hotlead', 'Mandate Sent', 'Documentation', 'Meeting Requested', 'Work Confirmation Pending'].includes(formData.status) && (
                   <span className="text-red-500">*</span>
                 )}
               </label>
@@ -799,7 +805,7 @@ export default function AddLeadPage() {
           <div className="space-y-2">
             <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
               Last Discussion
-              {['Follow-up', 'Hotlead', 'Mandate Sent', 'Documentation'].includes(formData.status) && (
+              {['Follow-up', 'Hotlead', 'Mandate Sent', 'Documentation', 'Meeting Requested', 'Work Confirmation Pending'].includes(formData.status) && (
                 <span className="text-red-500">*</span>
               )}
             </label>
@@ -852,6 +858,20 @@ export default function AddLeadPage() {
                   className="px-3 py-1.5 text-xs bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors border border-red-200"
                 >
                   Send me your mandate.
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSuggestionClick("They want to meet in-person we've requested client's work location/address for meeting.")}
+                  className="px-3 py-1.5 text-xs bg-indigo-100 text-indigo-700 rounded-full hover:bg-indigo-200 transition-colors border border-indigo-200"
+                >
+                  They want to meet in-person we've requested client's work location/address for meeting.
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSuggestionClick("Conversation happened, but the work confirmation is still pending.")}
+                  className="px-3 py-1.5 text-xs bg-teal-100 text-teal-700 rounded-full hover:bg-teal-200 transition-colors border border-teal-200"
+                >
+                  Conversation happened, but the work confirmation is still pending.
                 </button>
               </div>
             </div>
