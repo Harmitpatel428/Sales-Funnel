@@ -1301,27 +1301,10 @@ export default function DashboardPage() {
             >
               Search
             </button>
-            
-            {activeFilters.searchTerm && (
-              <button
-                onClick={clearSearch}
-                className="px-3 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm"
-              >
-                Clear
-              </button>
-            )}
           </div>
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2 flex-wrap">
-            {activeFilters.searchTerm && (
-              <button
-                onClick={clearAllFilters}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm"
-              >
-                Clear Search
-              </button>
-            )}
           </div>
 
           {/* Status Filter Buttons */}
