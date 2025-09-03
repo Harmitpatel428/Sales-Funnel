@@ -78,20 +78,22 @@ const Navigation = memo(function Navigation() {
                 </div>
                 
                 {/* Time and Date */}
-                <div className="text-center">
-                  <div className="text-lg font-bold text-gray-800 tracking-wider">
-                    {currentDateTime.toLocaleTimeString('en-US', {
-                      hour12: true,
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </div>
-                  <div className="text-xs text-gray-500 font-medium">
-                    {currentDateTime.toLocaleDateString('en-US', {
-                      weekday: 'short',
-                      month: 'short',
-                      day: 'numeric'
-                    })}
+                <div className="text-center flex-1">
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="text-xl font-bold text-gray-800 tracking-wider">
+                      {currentDateTime.toLocaleTimeString('en-US', {
+                        hour12: true,
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                    <div className="text-sm text-gray-500 font-medium">
+                      {currentDateTime.toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>
