@@ -61,37 +61,45 @@ const Navigation = memo(function Navigation() {
           </div>
           
           {/* Perfect Real-time Date & Time */}
-          <div className="flex items-center space-x-4">
-            {/* Date Display */}
-            <div className="text-right">
-              <div className="text-xs font-medium text-gray-500 tracking-wide uppercase">
-                {currentDateTime.toLocaleDateString('en-US', {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric'
-                })}
-              </div>
-              <div className="text-xs text-gray-400">
-                {currentDateTime.toLocaleDateString('en-US', {
-                  year: 'numeric'
-                })}
-              </div>
-            </div>
-            
-            {/* Time Display */}
-            <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-4 py-2 rounded-lg shadow-md">
-              <div className="flex items-center space-x-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-lg font-bold tracking-wider">
-                  {currentDateTime.toLocaleTimeString('en-US', {
-                    hour12: true,
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                  })}
-                </span>
+          <div className="flex items-center space-x-3">
+            {/* Modern Clock Container */}
+            <div className="relative bg-white border border-gray-200 rounded-xl p-3 shadow-lg backdrop-blur-sm">
+              {/* Animated Background */}
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-white to-blue-50 rounded-xl opacity-80"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-transparent to-blue-500/10 rounded-xl"></div>
+              
+              {/* Content */}
+              <div className="relative flex items-center space-x-3">
+                {/* Clock Icon */}
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center shadow-md">
+                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                
+                {/* Time and Date */}
+                <div className="text-center">
+                  <div className="text-lg font-bold text-gray-800 tracking-wider">
+                    {currentDateTime.toLocaleTimeString('en-US', {
+                      hour12: true,
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </div>
+                  <div className="text-xs text-gray-500 font-medium">
+                    {currentDateTime.toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                  </div>
+                </div>
+                
+                {/* Live Indicator */}
+                <div className="flex flex-col items-center space-y-1">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <div className="text-xs text-gray-400 font-medium">LIVE</div>
+                </div>
               </div>
             </div>
           </div>
