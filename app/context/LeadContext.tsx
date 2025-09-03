@@ -23,7 +23,7 @@ export interface Lead {
   marketingObjective?: string;
   budget?: string;
   timeline?: string;
-  status: 'New' | 'CNR' | 'Busy' | 'Follow-up' | 'Deal Close' | 'Work Alloted' | 'Hotlead';
+  status: 'New' | 'CNR' | 'Busy' | 'Follow-up' | 'Deal Close' | 'Work Alloted' | 'Hotlead' | 'Mandate Sent' | 'Documentation';
   contactOwner?: string;
   lastActivityDate: string;
   followUpDate: string;

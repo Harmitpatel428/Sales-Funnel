@@ -182,6 +182,17 @@ export default function AddLeadPage() {
       newErrors.followUpDate = 'Follow-up date cannot be in the past';
     }
 
+    // Required fields for specific statuses
+    const statusesRequiringFollowUp = ['Follow-up', 'Hotlead', 'Mandate Sent', 'Documentation'];
+    if (statusesRequiringFollowUp.includes(formData.status)) {
+      if (!formData.followUpDate.trim()) {
+        newErrors.followUpDate = 'Next follow-up date is required for this status';
+      }
+      if (!formData.notes.trim()) {
+        newErrors.notes = 'Last discussion is required for this status';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -712,6 +723,8 @@ export default function AddLeadPage() {
                 <option value="Deal Close">Deal Close</option>
                 <option value="Work Alloted">Work Alloted</option>
                 <option value="Hotlead">Hotlead</option>
+                <option value="Mandate Sent">Mandate Sent</option>
+                <option value="Documentation">Documentation</option>
               </select>
             </div>
             
@@ -733,6 +746,9 @@ export default function AddLeadPage() {
             <div className="space-y-2">
               <label htmlFor="followUpDate" className="block text-sm font-medium text-gray-700">
                 Next Follow-up Date
+                {['Follow-up', 'Hotlead', 'Mandate Sent', 'Documentation'].includes(formData.status) && (
+                  <span className="text-red-500">*</span>
+                )}
               </label>
               <input
                 type="date"
@@ -760,6 +776,9 @@ export default function AddLeadPage() {
           <div className="space-y-2">
             <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
               Last Discussion
+              {['Follow-up', 'Hotlead', 'Mandate Sent', 'Documentation'].includes(formData.status) && (
+                <span className="text-red-500">*</span>
+              )}
             </label>
             <textarea
               id="notes"
@@ -771,6 +790,14 @@ export default function AddLeadPage() {
               placeholder="Enter details about the last discussion with this lead"
               disabled={isSubmitting}
             />
+            {errors.notes && (
+              <p className="text-sm text-red-600 flex items-center">
+                <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                {errors.notes}
+              </p>
+            )}
           </div>
           
           {/* Form Actions */}

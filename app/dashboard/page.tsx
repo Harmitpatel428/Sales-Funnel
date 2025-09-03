@@ -170,7 +170,9 @@ export default function DashboardPage() {
       'Follow-up': 0,
       'Deal Close': 0,
       'Work Alloted': 0,
-      'Hotlead': 0
+      'Hotlead': 0,
+      'Mandate Sent': 0,
+      'Documentation': 0
     };
 
     leads.forEach(lead => {
@@ -1427,6 +1429,40 @@ export default function DashboardPage() {
                   {statusCounts['Hotlead']}
                 </span>
               </button>
+              <button
+                onClick={() => handleStatusFilter('Mandate Sent')}
+                className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2 ${
+                  activeFilters.status?.length === 1 && activeFilters.status[0] === 'Mandate Sent'
+                    ? 'bg-teal-800 text-white'
+                    : 'bg-teal-600 hover:bg-teal-700 text-white'
+                }`}
+              >
+                Mandate Sent
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                  activeFilters.status?.length === 1 && activeFilters.status[0] === 'Mandate Sent'
+                    ? 'bg-teal-900 text-teal-100'
+                    : 'bg-teal-500 text-white'
+                }`}>
+                  {statusCounts['Mandate Sent']}
+                </span>
+              </button>
+              <button
+                onClick={() => handleStatusFilter('Documentation')}
+                className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2 ${
+                  activeFilters.status?.length === 1 && activeFilters.status[0] === 'Documentation'
+                    ? 'bg-cyan-800 text-white'
+                    : 'bg-cyan-600 hover:bg-cyan-700 text-white'
+                }`}
+              >
+                Documentation
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                  activeFilters.status?.length === 1 && activeFilters.status[0] === 'Documentation'
+                    ? 'bg-cyan-900 text-cyan-100'
+                    : 'bg-cyan-500 text-white'
+                }`}>
+                  {statusCounts['Documentation']}
+                </span>
+              </button>
             </div>
           </div>
 
@@ -1468,6 +1504,8 @@ export default function DashboardPage() {
                   <option value="Deal Close">Deal Close</option>
                   <option value="Work Alloted">Work Alloted</option>
                   <option value="Hotlead">Hotlead</option>
+                  <option value="Mandate Sent">Mandate Sent</option>
+                  <option value="Documentation">Documentation</option>
                 </select>
                 <button
                   onClick={handleBulkDelete}

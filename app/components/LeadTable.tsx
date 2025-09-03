@@ -125,6 +125,8 @@ function LeadTable({
       case 'Deal Close': return 'bg-green-100 text-green-800';
       case 'Work Alloted': return 'bg-indigo-100 text-indigo-800';
       case 'Hotlead': return 'bg-red-100 text-red-800';
+      case 'Mandate Sent': return 'bg-teal-100 text-teal-800';
+      case 'Documentation': return 'bg-cyan-100 text-cyan-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   }, []);
