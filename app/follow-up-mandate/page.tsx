@@ -10,11 +10,11 @@ export default function FollowUpMandatePage() {
   const [activeTab, setActiveTab] = useState<'pending' | 'signed'>('pending');
 
   // Filter leads based on document status
-  const pendingDocuments = leads.filter(lead => 
+  const documentation = leads.filter(lead => 
     lead.documentStatus === 'Pending Documents' && !lead.isDone
   );
 
-  const signedMandate = leads.filter(lead => 
+  const mandateSent = leads.filter(lead => 
     lead.documentStatus === 'Signed Mandate' && !lead.isDone
   );
 
@@ -39,8 +39,8 @@ export default function FollowUpMandatePage() {
         <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-orange-400">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-gray-700">Pending Documents</h3>
-              <p className="text-3xl font-bold text-orange-600">{pendingDocuments.length}</p>
+              <h3 className="text-lg font-semibold text-gray-700">Documentation</h3>
+              <p className="text-3xl font-bold text-orange-600">{documentation.length}</p>
               <p className="text-sm text-gray-500 mt-1">Leads waiting for document submission</p>
             </div>
             <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
@@ -55,7 +55,7 @@ export default function FollowUpMandatePage() {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-semibold text-gray-700">Mandate Sent</h3>
-              <p className="text-3xl font-bold text-green-600">{signedMandate.length}</p>
+              <p className="text-3xl font-bold text-green-600">{mandateSent.length}</p>
               <p className="text-sm text-gray-500 mt-1">Leads with completed mandate signing</p>
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
@@ -79,7 +79,7 @@ export default function FollowUpMandatePage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Pending Documents ({pendingDocuments.length})
+              Documentation ({documentation.length})
             </button>
             <button
               onClick={() => setActiveTab('signed')}
@@ -89,7 +89,7 @@ export default function FollowUpMandatePage() {
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
-              Signed Mandate ({signedMandate.length})
+              Mandate Sent ({mandateSent.length})
             </button>
           </nav>
         </div>
@@ -98,8 +98,8 @@ export default function FollowUpMandatePage() {
         <div className="p-6">
           {activeTab === 'pending' && (
             <div>
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Pending Documents</h2>
-              {pendingDocuments.length === 0 ? (
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Documentation</h2>
+              {documentation.length === 0 ? (
                 <div className="text-center py-8">
                   <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -110,7 +110,7 @@ export default function FollowUpMandatePage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {pendingDocuments.map((lead) => (
+                  {documentation.map((lead) => (
                     <div key={lead.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
@@ -120,7 +120,7 @@ export default function FollowUpMandatePage() {
                         </div>
                         <div className="flex items-center space-x-3">
                           <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
-                            Pending Documents
+                            Documentation
                           </span>
                           <button
                             onClick={() => router.push(`/add-lead?mode=edit&id=${lead.id}`)}
@@ -139,19 +139,19 @@ export default function FollowUpMandatePage() {
 
           {activeTab === 'signed' && (
             <div>
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Signed Mandate</h2>
-              {signedMandate.length === 0 ? (
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Mandate Sent</h2>
+              {mandateSent.length === 0 ? (
                 <div className="text-center py-8">
                   <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
-                  <p className="text-gray-500">No leads with signed mandates</p>
+                  <p className="text-gray-500">No leads with mandate sent</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {signedMandate.map((lead) => (
+                  {mandateSent.map((lead) => (
                     <div key={lead.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
@@ -161,7 +161,7 @@ export default function FollowUpMandatePage() {
                         </div>
                         <div className="flex items-center space-x-3">
                           <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                            Signed Mandate
+                            Mandate Sent
                           </span>
                           <button
                             onClick={() => router.push(`/add-lead?mode=edit&id=${lead.id}`)}

@@ -336,7 +336,8 @@ export default function AddLeadPage() {
           isDeleted: false,
           isUpdated: false,
           mandateStatus: 'Pending',
-          documentStatus: 'Pending Documents',
+          documentStatus: formData.status === 'Mandate Sent' ? 'Signed Mandate' : 
+                         formData.status === 'Documentation' ? 'Pending Documents' : 'Pending Documents',
         };
         
         // Simulate API call delay
@@ -392,7 +393,8 @@ export default function AddLeadPage() {
           isDeleted: false,
           isUpdated: false,
           mandateStatus: 'Pending',
-          documentStatus: 'Pending Documents',
+          documentStatus: formData.status === 'Mandate Sent' ? 'Signed Mandate' : 
+                         formData.status === 'Documentation' ? 'Pending Documents' : 'Pending Documents',
           activities: [{
             id: generateId(),
             leadId: leadId,

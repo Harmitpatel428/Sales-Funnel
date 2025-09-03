@@ -1576,7 +1576,7 @@ export default function DashboardPage() {
           className="bg-white p-4 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-all duration-200 hover:bg-gray-50"
           onClick={() => router.push('/follow-up-mandate')}
         >
-          <h3 className="text-lg font-semibold text-gray-700">Mandate & Documentation</h3>
+          <h3 className="text-lg font-semibold text-gray-700">Documentation & Mandate Sent</h3>
           <p className="text-3xl font-bold text-purple-600">{followUpMandate}</p>
         </div>
       </div>
