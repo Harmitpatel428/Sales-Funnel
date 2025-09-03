@@ -1765,12 +1765,8 @@ export default function DashboardPage() {
                     <p className="text-sm font-medium text-gray-900">{selectedLead.unitType}</p>
                   </div>
                   <div className="bg-gray-50 p-3 rounded-md">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Completion</label>
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      selectedLead.isDone ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {selectedLead.isDone ? 'Completed' : 'Active'}
-                    </span>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Discom</label>
+                    <p className="text-sm font-medium text-gray-900">{selectedLead.discom || 'N/A'}</p>
                   </div>
                   
                   {/* Dates */}
@@ -1789,84 +1785,57 @@ export default function DashboardPage() {
                     <p className="text-sm font-medium text-gray-900">{formatDateToDDMMYYYY(selectedLead.lastActivityDate)}</p>
                   </div>
                   
-                  {/* Mandate & Document Status */}
-                  {selectedLead.mandateStatus && (
-                    <div className="bg-gray-50 p-3 rounded-md">
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Mandate Status</label>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        selectedLead.mandateStatus === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                        selectedLead.mandateStatus === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-                        'bg-green-100 text-green-800'
-                      }`}>
-                        {selectedLead.mandateStatus}
-                      </span>
-                    </div>
-                  )}
-                  {selectedLead.documentStatus && (
-                    <div className="bg-gray-50 p-3 rounded-md">
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Document Status</label>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        selectedLead.documentStatus === 'Pending Documents' ? 'bg-red-100 text-red-800' :
-                        selectedLead.documentStatus === 'Documents Submitted' ? 'bg-yellow-100 text-yellow-800' :
-                        selectedLead.documentStatus === 'Documents Reviewed' ? 'bg-blue-100 text-blue-800' :
-                        'bg-green-100 text-green-800'
-                      }`}>
-                        {selectedLead.documentStatus}
-                      </span>
-                    </div>
-                  )}
+
                   </div>
 
                 {/* Additional Numbers */}
-                {selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 1 && (
+                {selectedLead.mobileNumbers && selectedLead.mobileNumbers.filter(m => !m.isMain && m.number.trim()).length > 0 && (
                   <div className="bg-gray-50 p-3 rounded-md">
                     <label className="block text-xs font-medium text-gray-600 mb-2">Additional Numbers</label>
                     <div className="flex flex-wrap gap-2">
-                      {selectedLead.mobileNumbers.filter(m => !m.isMain).map((mobile, index) => (
+                      {selectedLead.mobileNumbers.filter(m => !m.isMain && m.number.trim()).map((mobile, index) => (
                         <span key={index} className="text-sm font-medium text-gray-900 bg-white px-2 py-1 rounded border">
-                          {mobile.name}: {mobile.number}
+                          {mobile.name ? `${mobile.name}: ${mobile.number}` : mobile.number}
                         </span>
                       ))}
-                        </div>
-                      </div>
+                    </div>
+                  </div>
                 )}
 
                 {/* Notes and Additional Info */}
-                {(selectedLead.companyLocation || selectedLead.notes || selectedLead.finalConclusion) && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {selectedLead.companyLocation && (
-                      <div className="bg-gray-50 p-3 rounded-md">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Company Location</label>
-                        <p className="text-sm font-medium text-gray-900">{selectedLead.companyLocation}</p>
-                      </div>
-                    )}
-                    {selectedLead.notes && (
-                      <div className="bg-gray-50 p-3 rounded-md">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Last Discussion</label>
-                        <p className="text-sm font-medium text-gray-900 line-clamp-3">{selectedLead.notes}</p>
-                      </div>
-                    )}
-                    {selectedLead.finalConclusion && (
-                      <div className="bg-gray-50 p-3 rounded-md">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Final Conclusion</label>
-                        <p className="text-sm font-medium text-gray-900 line-clamp-3">{selectedLead.finalConclusion}</p>
-                  </div>
-                    )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {selectedLead.companyLocation && (
+                    <div className="bg-gray-50 p-3 rounded-md">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Company Location</label>
+                      <p className="text-sm font-medium text-gray-900">{selectedLead.companyLocation}</p>
+                    </div>
+                  )}
+                  {selectedLead.notes && (
+                    <div className="bg-gray-50 p-3 rounded-md">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Last Discussion</label>
+                      <p className="text-sm font-medium text-gray-900 line-clamp-3">{selectedLead.notes}</p>
+                    </div>
+                  )}
+                  {selectedLead.finalConclusion && (
+                    <div className="bg-gray-50 p-3 rounded-md">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Final Conclusion</label>
+                      <p className="text-sm font-medium text-gray-900 line-clamp-3">{selectedLead.finalConclusion}</p>
+                    </div>
+                  )}
                 </div>
-                )}
 
                 {/* Recent Activities - Compact */}
-                {selectedLead.activities && selectedLead.activities.length > 0 && (
+                {selectedLead.activities && selectedLead.activities.filter(activity => activity.description !== 'Lead created').length > 0 && (
                   <div className="bg-gray-50 p-3 rounded-md">
                     <label className="block text-xs font-medium text-gray-600 mb-2">Recent Activities</label>
                     <div className="space-y-1 max-h-32 overflow-y-auto">
-                      {selectedLead.activities.slice(-3).map((activity) => (
+                      {selectedLead.activities.filter(activity => activity.description !== 'Lead created').slice(-3).map((activity) => (
                         <div key={activity.id} className="bg-white p-2 rounded text-xs">
                           <p className="text-gray-900 font-medium">{activity.description}</p>
                           <p className="text-gray-500">
                             {new Date(activity.timestamp).toLocaleDateString()}
                           </p>
-              </div>
+                        </div>
                       ))}
                     </div>
                   </div>

@@ -16,6 +16,7 @@ export interface Lead {
   consumerNumber: string;
   company: string;
   clientName: string;
+  discom?: string;
   mobileNumbers: MobileNumber[]; // Updated to support multiple mobile numbers
   mobileNumber: string; // Keep for backward compatibility
   companyLocation?: string; // New field for company location

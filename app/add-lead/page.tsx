@@ -17,6 +17,7 @@ export default function AddLeadPage() {
     consumerNumber: '',
     company: '',
     clientName: '',
+    discom: '',
     mobileNumber: '', // Keep for backward compatibility
     mobileNumbers: [
       { id: '1', number: '', name: '', isMain: true },
@@ -109,6 +110,7 @@ export default function AddLeadPage() {
             consumerNumber: leadData.consumerNumber || '',
             company: leadData.company || '',
             clientName: leadData.clientName || '',
+            discom: leadData.discom || '',
             mobileNumber: leadData.mobileNumber || '', // Keep for backward compatibility
             mobileNumbers: mobileNumbers,
             companyLocation: leadData.companyLocation || address, // Use existing or extracted address
@@ -329,6 +331,7 @@ export default function AddLeadPage() {
           consumerNumber: formData.consumerNumber,
           company: formData.company,
           clientName: formData.clientName,
+          discom: formData.discom,
           mobileNumber: mainMobileNumber, // Keep for backward compatibility
           mobileNumbers: formData.mobileNumbers,
           companyLocation: formData.companyLocation,
@@ -386,6 +389,7 @@ export default function AddLeadPage() {
           consumerNumber: formData.consumerNumber,
           company: formData.company,
           clientName: formData.clientName,
+          discom: formData.discom,
           mobileNumber: mainMobileNumber, // Keep for backward compatibility
           mobileNumbers: updatedMobileNumbers,
           companyLocation: formData.companyLocation,
@@ -421,6 +425,7 @@ export default function AddLeadPage() {
           consumerNumber: '',
           company: '',
           clientName: '',
+          discom: '',
           mobileNumber: '', // Keep for backward compatibility
           mobileNumbers: [
             { id: '1', number: '', name: '', isMain: true },
@@ -621,6 +626,26 @@ export default function AddLeadPage() {
                   {errors.clientName}
                 </p>
               )}
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="discom" className="block text-sm font-medium text-gray-700">
+                Discom
+              </label>
+              <select
+                id="discom"
+                name="discom"
+                value={formData.discom}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200 text-black"
+                disabled={isSubmitting}
+              >
+                <option value="">Select Discom</option>
+                <option value="UGVCL">UGVCL</option>
+                <option value="MGVCL">MGVCL</option>
+                <option value="DGVCL">DGVCL</option>
+                <option value="PGVCL">PGVCL</option>
+              </select>
             </div>
             
             {/* Mobile Numbers Section */}
