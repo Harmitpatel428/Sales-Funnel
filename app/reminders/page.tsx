@@ -2,97 +2,11 @@
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLeads, Lead } from '../context/LeadContext';
-import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-
-// Calculate today's date at midnight UTC once per module load.
-// This is more efficient than calculating it in every component instance.
-// It might become stale if the page is open across midnight, but that's an acceptable trade-off for this app.
-const todayAtUTCMidnight = new Date(new Date().toISOString().split('T')[0]!);
-
-function LeadCard({ lead, onMarkDone, onViewDetails }: { lead: Lead; onMarkDone: () => void; onViewDetails: () => void }) {
-  // Compare with the pre-calculated today's date.
-  const isPast = new Date(lead.followUpDate) < todayAtUTCMidnight;
-
-  // Get status color
-  const getStatusColor = (status: Lead['status']) => {
-    switch (status) {
-      case 'New': return 'bg-blue-50 text-blue-700';
-      case 'Contacted': return 'bg-purple-50 text-purple-700';
-      case 'In Progress': return 'bg-yellow-50 text-yellow-700';
-      case 'Follow-up': return 'bg-orange-50 text-orange-700';
-      case 'Closed - Won': return 'bg-green-50 text-green-700';
-      case 'Closed - Lost': return 'bg-red-50 text-red-700';
-      default: return 'bg-gray-50 text-gray-700';
-    }
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25 }}
-      className="bg-white rounded-lg shadow p-5 border border-gray-100"
-    >
-      <div className="flex justify-between items-start gap-4">
-        <div className="min-w-0">
-          <h3 className="font-semibold text-gray-800 truncate">{lead.clientName}</h3>
-          <p className="text-gray-600 text-sm truncate">{lead.company}</p>
-          <div className="flex flex-wrap gap-2 mt-2">
-            <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(lead.status)}`}>
-              {lead.status}
-            </span>
-            <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-              lead.isDone
-                ? 'bg-green-50 text-green-700'
-                : isPast
-                ? 'bg-red-50 text-red-700'
-                : 'bg-purple-50 text-purple-700'
-            }`}>
-              {new Date(lead.followUpDate).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric',
-              })}
-            </span>
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-            <p className="text-gray-700">
-              <span className="font-medium">Phone:</span> {lead.mobileNumber || 'N/A'}
-            </p>
-            <p className="text-gray-700">
-              <span className="font-medium">Consumer #:</span> {lead.consumerNumber || 'N/A'}
-            </p>
-          </div>
-          {lead.notes && (
-            <p className="text-gray-700 mt-2 text-sm">
-              <span className="font-medium">Last Discussion:</span> {lead.notes}
-            </p>
-          )}
-        </div>
-        <div className="text-right flex flex-col space-y-2">
-          <button
-            onClick={onViewDetails}
-            className="bg-blue-500 text-white px-3 py-1.5 rounded-md text-xs font-medium hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          >
-            View Details
-          </button>
-          {!lead.isDone && (
-            <button
-              onClick={onMarkDone}
-              className="bg-green-500 text-white px-3 py-1.5 rounded-md text-xs font-medium hover:bg-green-600 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-            >
-              Mark as Done
-            </button>
-          )}
-        </div>
-      </div>
-    </motion.div>
-  );
-}
+import LeadTable from '../components/LeadTable';
 
 export default function RemindersPage() {
-  const { leads, markAsDone } = useLeads();
+  const { leads, markAsDone, deleteLead } = useLeads();
   const router = useRouter();
 
   const [startDate, setStartDate] = useState<string>('');
@@ -100,6 +14,7 @@ export default function RemindersPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [includeDone, setIncludeDone] = useState<boolean>(false);
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
 
   // Handle URL parameters for filtering
   useEffect(() => {
@@ -136,7 +51,7 @@ export default function RemindersPage() {
       followUpDateObj: new Date(lead.followUpDate),
     }));
 
-    items = items.filter(l => includeDone || !l.isDone);
+    items = items.filter(l => !l.isDeleted && (includeDone || !l.isDone));
     
     if (statusFilter) {
       items = items.filter(l => l.status === statusFilter);
@@ -169,6 +84,87 @@ export default function RemindersPage() {
     setIncludeDone(false);
     setStatusFilter('');
   }, []);
+
+  // Handle lead click
+  const handleLeadClick = (lead: any) => {
+    router.push(`/lead/${lead.id}`);
+  };
+
+  // Handle lead selection
+  const handleLeadSelection = (leadId: string, checked: boolean) => {
+    const newSelected = new Set(selectedLeads);
+    if (checked) {
+      newSelected.add(leadId);
+    } else {
+      newSelected.delete(leadId);
+    }
+    setSelectedLeads(newSelected);
+  };
+
+  // Handle select all
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedLeads(new Set(filteredAndSorted.map(lead => lead.id)));
+    } else {
+      setSelectedLeads(new Set());
+    }
+  };
+
+  // Handle bulk delete
+  const handleBulkDeleteClick = () => {
+    if (selectedLeads.size === 0) return;
+    setShowBulkDeleteModal(true);
+    setBulkDeletePassword('');
+    setBulkDeleteError('');
+  };
+
+  const handleBulkDeleteSubmit = () => {
+    if (bulkDeletePassword !== DELETE_PASSWORD) {
+      setBulkDeleteError('Incorrect password. Please try again.');
+      return;
+    }
+    
+    selectedLeads.forEach(leadId => {
+      deleteLead(leadId);
+    });
+    
+    setShowBulkDeleteModal(false);
+    setSelectedLeads(new Set());
+    setBulkDeletePassword('');
+    setBulkDeleteError('');
+  };
+
+  const handleBulkDeleteCancel = () => {
+    setShowBulkDeleteModal(false);
+    setBulkDeletePassword('');
+    setBulkDeleteError('');
+  };
+
+  // Action buttons for the table
+  const renderActionButtons = (lead: any) => (
+    <div className="flex space-x-2">
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          router.push(`/lead/${lead.id}`);
+        }}
+        className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md transition-colors"
+      >
+        View Details
+      </button>
+      {!lead.isDone && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            markAsDone(lead.id);
+          }}
+          className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded-md transition-colors"
+        >
+          Mark as Done
+        </button>
+      )}
+    </div>
+  );
 
   return (
     <div className="mt-8">
@@ -265,20 +261,113 @@ export default function RemindersPage() {
         </div>
       </div>
 
-      {filteredAndSorted.length === 0 ? (
-        <p className="text-white-500 italic">
-          No reminders found for the selected filters.
-        </p>
-      ) : (
-        <div className="space-y-4">
-          {filteredAndSorted.map(lead => (
-            <LeadCard
-              key={lead.id}
-              lead={lead}
-              onMarkDone={() => markAsDone(lead.id)}
-              onViewDetails={() => router.push(`/lead/${lead.id}`)}
-            />
-          ))}
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold text-gray-800">Filtered Results</h2>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => handleSelectAll(selectedLeads.size === filteredAndSorted.length ? false : true)}
+            className="px-3 py-1 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+          >
+            {selectedLeads.size === filteredAndSorted.length ? 'Deselect All' : 'Select All'}
+          </button>
+          {selectedLeads.size > 0 && (
+            <button
+              onClick={handleBulkDeleteClick}
+              className="px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+            >
+              Delete Selected ({selectedLeads.size})
+            </button>
+          )}
+        </div>
+      </div>
+
+      <LeadTable
+        leads={filteredAndSorted}
+        onLeadClick={handleLeadClick}
+        selectedLeads={selectedLeads}
+        onLeadSelection={handleLeadSelection}
+        showActions={true}
+        actionButtons={renderActionButtons}
+        emptyMessage="No reminders found for the selected filters."
+      />
+
+      {/* Bulk Delete Modal */}
+      {showBulkDeleteModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              {/* Modal Header */}
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-black">Bulk Delete Protection</h3>
+                <button
+                  onClick={handleBulkDeleteCancel}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  title="Close modal"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="space-y-4">
+                <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-red-800">Warning: Bulk Deletion</h3>
+                      <div className="mt-2 text-sm text-red-700">
+                        <p>You are about to delete {selectedLeads.size} leads.</p>
+                        <p className="mt-1">The leads will be marked as deleted and moved to the "All Leads" page.</p>
+                        <p className="mt-1">This action cannot be undone.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="bulkDeletePassword" className="block text-sm font-medium text-black mb-2">
+                    Enter Admin Password to Continue
+                  </label>
+                  <input
+                    type="password"
+                    id="bulkDeletePassword"
+                    value={bulkDeletePassword}
+                    onChange={(e) => setBulkDeletePassword(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleBulkDeleteSubmit()}
+                    placeholder="Enter password..."
+                    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-black text-black focus:outline-none focus:ring-red-500 focus:border-red-500"
+                    autoFocus
+                  />
+                  {bulkDeleteError && (
+                    <p className="mt-2 text-sm text-red-600">{bulkDeleteError}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex justify-end space-x-3 mt-6 pt-4 border-t">
+                <button
+                  onClick={handleBulkDeleteCancel}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleBulkDeleteSubmit}
+                  disabled={!bulkDeletePassword.trim()}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Delete {selectedLeads.size} Leads
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

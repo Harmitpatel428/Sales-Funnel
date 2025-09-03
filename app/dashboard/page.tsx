@@ -130,9 +130,15 @@ export default function DashboardPage() {
     let upcoming = 0;
     let overdue = 0;
     let followUpMandate = 0;
+    let totalLeads = 0;
 
     leads.forEach(lead => {
-      if (lead.isDone || !lead.followUpDate) return;
+      // Count total active leads (not deleted, not done)
+      if (!lead.isDeleted && !lead.isDone) {
+        totalLeads++;
+      }
+
+      if (lead.isDeleted || lead.isDone || !lead.followUpDate) return;
 
       const followUpDate = parseFollowUpDate(lead.followUpDate);
       if (!followUpDate) return;
@@ -147,13 +153,13 @@ export default function DashboardPage() {
         overdue++;
       }
 
-      if (lead.status === 'Follow-up' || lead.status === 'Mandate Sent' || lead.status === 'Documentation') {
+      if (lead.status === 'Mandate Sent' || lead.status === 'Documentation') {
         followUpMandate++;
       }
     });
 
     return {
-      totalLeads: leads.length,
+      totalLeads,
       dueToday,
       upcoming,
       overdue,
@@ -811,7 +817,7 @@ export default function DashboardPage() {
           isDeleted: leadData.isDeleted || false,
           isUpdated: false,
           mandateStatus: leadData.mandateStatus || 'Pending',
-          documentStatus: leadData.documentStatus || 'Pending Documents'
+          ...(leadData.documentStatus && { documentStatus: leadData.documentStatus })
         };
         
         console.log('Final newLead.mobileNumber: "' + newLead.mobileNumber + '" (type: ' + typeof newLead.mobileNumber + ')');
@@ -1549,7 +1555,7 @@ export default function DashboardPage() {
           onClick={() => router.push('/all-leads')}
         >
           <h3 className="text-lg font-semibold text-gray-700">All Leads</h3>
-          <p className="text-3xl font-bold text-blue-600">{totalLeads}</p>
+          <p className="text-3xl font-bold text-blue-600">{leads.length}</p>
         </div>
         <div 
           className="bg-white p-4 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-all duration-200 hover:bg-gray-50"
@@ -1576,7 +1582,7 @@ export default function DashboardPage() {
           className="bg-white p-4 rounded-lg shadow-md cursor-pointer hover:shadow-lg transition-all duration-200 hover:bg-gray-50"
           onClick={() => router.push('/follow-up-mandate')}
         >
-          <h3 className="text-lg font-semibold text-gray-700">Documentation & Mandate Sent</h3>
+          <h3 className="text-lg font-semibold text-gray-700">Mandate & Documentation</h3>
           <p className="text-3xl font-bold text-purple-600">{followUpMandate}</p>
         </div>
       </div>

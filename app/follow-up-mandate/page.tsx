@@ -3,19 +3,78 @@
 import { useState } from 'react';
 import { useLeads } from '../context/LeadContext';
 import { useRouter } from 'next/navigation';
+import LeadTable from '../components/LeadTable';
 
 export default function FollowUpMandatePage() {
   const router = useRouter();
-  const { leads } = useLeads();
+  const { leads, deleteLead } = useLeads();
   const [activeTab, setActiveTab] = useState<'pending' | 'signed'>('pending');
+  const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
 
-  // Filter leads based on document status
+  // Filter leads based on status
   const documentation = leads.filter(lead => 
-    lead.documentStatus === 'Pending Documents' && !lead.isDone
+    !lead.isDeleted && lead.status === 'Documentation' && !lead.isDone
   );
 
   const mandateSent = leads.filter(lead => 
-    lead.documentStatus === 'Signed Mandate' && !lead.isDone
+    !lead.isDeleted && lead.status === 'Mandate Sent' && !lead.isDone
+  );
+
+  // Handle lead click
+  const handleLeadClick = (lead: any) => {
+    localStorage.setItem('editingLead', JSON.stringify(lead));
+    router.push(`/add-lead?mode=edit&id=${lead.id}`);
+  };
+
+  // Handle lead selection
+  const handleLeadSelection = (leadId: string, checked: boolean) => {
+    const newSelected = new Set(selectedLeads);
+    if (checked) {
+      newSelected.add(leadId);
+    } else {
+      newSelected.delete(leadId);
+    }
+    setSelectedLeads(newSelected);
+  };
+
+  // Handle select all
+  const handleSelectAll = (checked: boolean) => {
+    const currentLeads = activeTab === 'pending' ? documentation : mandateSent;
+    if (checked) {
+      setSelectedLeads(new Set(currentLeads.map(lead => lead.id)));
+    } else {
+      setSelectedLeads(new Set());
+    }
+  };
+
+  // Handle bulk delete - no password protection
+  const handleBulkDeleteClick = () => {
+    if (selectedLeads.size === 0) return;
+    
+    // Direct deletion without password protection
+    selectedLeads.forEach(leadId => {
+      deleteLead(leadId);
+    });
+    
+    setSelectedLeads(new Set());
+  };
+
+  // Action buttons for the table
+  const renderActionButtons = (lead: any) => (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        localStorage.setItem('editingLead', JSON.stringify(lead));
+        router.push(`/add-lead?mode=edit&id=${lead.id}`);
+      }}
+      className={`px-3 py-1 text-sm rounded-md transition-colors ${
+        activeTab === 'pending' 
+          ? 'bg-orange-600 hover:bg-orange-700 text-white' 
+          : 'bg-green-600 hover:bg-green-700 text-white'
+      }`}
+    >
+      Update Status
+    </button>
   );
 
   return (
@@ -98,83 +157,67 @@ export default function FollowUpMandatePage() {
         <div className="p-6">
           {activeTab === 'pending' && (
             <div>
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Documentation</h2>
-              {documentation.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                  </div>
-                  <p className="text-gray-500">No leads waiting for documents</p>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-800">Documentation</h2>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => handleSelectAll(selectedLeads.size === documentation.length ? false : true)}
+                    className="px-3 py-1 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                  >
+                    {selectedLeads.size === documentation.length ? 'Deselect All' : 'Select All'}
+                  </button>
+                  {selectedLeads.size > 0 && (
+                    <button
+                      onClick={handleBulkDeleteClick}
+                      className="px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                    >
+                      Delete Selected ({selectedLeads.size})
+                    </button>
+                  )}
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {documentation.map((lead) => (
-                    <div key={lead.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-800">{lead.clientName}</h3>
-                          <p className="text-sm text-gray-600">{lead.company}</p>
-                          <p className="text-sm text-gray-500">{lead.mobileNumber || 'N/A'}</p>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">
-                            Documentation
-                          </span>
-                          <button
-                            onClick={() => router.push(`/add-lead?mode=edit&id=${lead.id}`)}
-                            className="px-3 py-1 bg-orange-600 text-white text-sm rounded-md hover:bg-orange-700 transition-colors"
-                          >
-                            Update Status
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              </div>
+              <LeadTable
+                leads={documentation}
+                onLeadClick={handleLeadClick}
+                selectedLeads={selectedLeads}
+                onLeadSelection={handleLeadSelection}
+                showActions={true}
+                actionButtons={renderActionButtons}
+                emptyMessage="No leads waiting for documents"
+              />
             </div>
           )}
 
           {activeTab === 'signed' && (
             <div>
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Mandate Sent</h2>
-              {mandateSent.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <p className="text-gray-500">No leads with mandate sent</p>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-800">Mandate Sent</h2>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => handleSelectAll(selectedLeads.size === mandateSent.length ? false : true)}
+                    className="px-3 py-1 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                  >
+                    {selectedLeads.size === mandateSent.length ? 'Deselect All' : 'Select All'}
+                  </button>
+                  {selectedLeads.size > 0 && (
+                    <button
+                      onClick={handleBulkDeleteClick}
+                      className="px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                    >
+                      Delete Selected ({selectedLeads.size})
+                    </button>
+                  )}
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {mandateSent.map((lead) => (
-                    <div key={lead.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-800">{lead.clientName}</h3>
-                          <p className="text-sm text-gray-600">{lead.company}</p>
-                          <p className="text-sm text-gray-500">{lead.mobileNumber || 'N/A'}</p>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                            Mandate Sent
-                          </span>
-                          <button
-                            onClick={() => router.push(`/add-lead?mode=edit&id=${lead.id}`)}
-                            className="px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
-                          >
-                            View Details
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              </div>
+              <LeadTable
+                leads={mandateSent}
+                onLeadClick={handleLeadClick}
+                selectedLeads={selectedLeads}
+                onLeadSelection={handleLeadSelection}
+                showActions={true}
+                actionButtons={renderActionButtons}
+                emptyMessage="No leads with mandate sent"
+              />
             </div>
           )}
         </div>

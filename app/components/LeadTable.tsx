@@ -13,6 +13,11 @@ interface LeadTableProps {
   onLeadSelection?: (leadId: string, checked: boolean) => void;
   selectAll?: boolean;
   onSelectAll?: (checked: boolean) => void;
+  leads?: Lead[]; // Allow passing custom leads array
+  showActions?: boolean; // Show action buttons
+  actionButtons?: (lead: Lead) => React.ReactNode; // Custom action buttons
+  emptyMessage?: string; // Custom empty message
+  className?: string; // Additional CSS classes
 }
 
 function LeadTable({ 
@@ -21,16 +26,21 @@ function LeadTable({
   selectedLeads = new Set(), 
   onLeadSelection, 
   selectAll = false, 
-  onSelectAll
+  onSelectAll,
+  leads: customLeads,
+  showActions = false,
+  actionButtons,
+  emptyMessage = "No leads found matching the current filters.",
+  className = ""
 }: LeadTableProps) {
-  const { leads, getFilteredLeads } = useLeads();
+  const { leads: contextLeads, getFilteredLeads } = useLeads();
   const [sortField, setSortField] = useState<SortField>('');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null);
 
-  
+  // Use custom leads if provided, otherwise use context leads
+  const leads = customLeads || contextLeads;
 
-  
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = () => {
@@ -47,8 +57,12 @@ function LeadTable({
   
   // Get filtered leads
   const filteredLeads = useMemo(() => {
+    if (customLeads) {
+      // If custom leads are provided, return them as is (no filtering)
+      return customLeads;
+    }
     return getFilteredLeads(filters);
-  }, [getFilteredLeads, filters, leads]);
+  }, [getFilteredLeads, filters, leads, customLeads]);
   
   // Sort leads based on current sort field and direction
   const sortedLeads = useMemo(() => {
@@ -131,12 +145,16 @@ function LeadTable({
     }
   }, []);
 
+  // Calculate column span for empty state
+  const getColumnSpan = () => {
+    let span = 9; // Base columns: KVA, Connection Date, Consumer Number, Company, Client Name, Mobile Number, Status, Last Activity, Next Follow-up
+    if (onLeadSelection) span += 1; // Add checkbox column
+    if (showActions) span += 1; // Add actions column
+    return span;
+  };
 
-
-
-  
   return (
-    <div className="overflow-x-auto shadow-md rounded-lg relative">
+    <div className={`overflow-x-auto shadow-md rounded-lg relative ${className}`}>
       <table className="min-w-full divide-y divide-gray-200 bg-white">
         <thead className="bg-gray-50">
           <tr>
@@ -148,7 +166,6 @@ function LeadTable({
                     checked={selectAll}
                     ref={(input) => {
                       if (input) {
-                        const filteredLeads = getFilteredLeads(filters);
                         const selectedCount = selectedLeads ? selectedLeads.size : 0;
                         input.indeterminate = selectedCount > 0 && selectedCount < filteredLeads.length;
                       }
@@ -223,6 +240,11 @@ function LeadTable({
             >
               Next Follow-up{renderSortIndicator('followUpDate')}
             </th>
+            {showActions && (
+              <th scope="col" className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
+            )}
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
@@ -230,7 +252,7 @@ function LeadTable({
             sortedLeads.map((lead) => (
               <tr 
                 key={lead.id} 
-                className="cursor-pointer"
+                className="cursor-pointer hover:bg-gray-50 transition-colors duration-150"
                 onClick={() => onLeadClick && onLeadClick(lead)}
               >
                 {onLeadSelection && (
@@ -244,7 +266,7 @@ function LeadTable({
                         className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
                         aria-label={`Select lead ${lead.kva}`}
                       />
-                </div>
+                    </div>
                   </td>
                 )}
                 <td className="px-2 py-4 whitespace-nowrap">
@@ -271,7 +293,6 @@ function LeadTable({
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(lead.status)}`}>
                     {lead.status}
                   </span>
-                
                 </td>
                 <td className="px-2 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-500">{formatDate(lead.lastActivityDate)}</div>
@@ -279,12 +300,17 @@ function LeadTable({
                 <td className="px-2 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-500">{formatDate(lead.followUpDate)}</div>
                 </td>
+                {showActions && (
+                  <td className="px-2 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    {actionButtons && actionButtons(lead)}
+                  </td>
+                )}
               </tr>
             ))
           ) : (
             <tr>
-              <td colSpan={onLeadSelection ? 8 : 7} className="px-6 py-4 text-center text-sm text-gray-500">
-                No leads found matching the current filters.
+              <td colSpan={getColumnSpan()} className="px-6 py-4 text-center text-sm text-gray-500">
+                {emptyMessage}
               </td>
             </tr>
           )}

@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useLeads, Lead } from '../context/LeadContext';
 import { useRouter } from 'next/navigation';
+import LeadTable from '../components/LeadTable';
 
 export default function AllLeadsPage() {
   const router = useRouter();
@@ -190,16 +191,24 @@ export default function AllLeadsPage() {
     setPasswordError('');
   };
 
+  // Restore function to restore deleted leads
+  const handleRestoreClick = (lead: Lead) => {
+    if (lead.isDeleted) {
+      // Restore the lead by setting isDeleted to false
+      setLeads(prev => 
+        prev.map(l => l.id === lead.id ? { ...l, isDeleted: false } : l)
+      );
+      
+      // Show success message
+      alert(`Lead "${lead.clientName}" has been restored successfully!`);
+    }
+  };
+
   const handlePasswordSubmit = () => {
     if (password === DELETE_PASSWORD) {
       if (leadToDelete) {
-        if (leadToDelete.isDeleted) {
-          // Permanent deletion - actually remove from the system
-          setLeads(prev => prev.filter(lead => lead.id !== leadToDelete.id));
-        } else {
-          // Regular deletion - mark as deleted
-          deleteLead(leadToDelete.id);
-        }
+        // Always permanently delete when deleting from All Leads page
+        setLeads(prev => prev.filter(lead => lead.id !== leadToDelete.id));
         setShowPasswordModal(false);
         setLeadToDelete(null);
         setPassword('');
@@ -276,10 +285,35 @@ export default function AllLeadsPage() {
     setBulkDeleteError('');
   };
 
+  // Bulk restore function
+  const handleBulkRestoreClick = () => {
+    if (selectedLeads.size === 0) return;
+    
+    // Restore all selected deleted leads
+    setLeads(prev => 
+      prev.map(lead => 
+        selectedLeads.has(lead.id) && lead.isDeleted 
+          ? { ...lead, isDeleted: false }
+          : lead
+      )
+    );
+    
+    setSelectedLeads(new Set());
+    
+    // Show success message
+    alert(`${selectedLeads.size} leads have been restored successfully!`);
+  };
+
   // Check if any selected leads are already deleted
   const hasDeletedLeads = Array.from(selectedLeads).some(leadId => {
     const lead = leads.find(l => l.id === leadId);
     return lead?.isDeleted;
+  });
+
+  // Check if any selected leads are not deleted
+  const hasActiveLeads = Array.from(selectedLeads).some(leadId => {
+    const lead = leads.find(l => l.id === leadId);
+    return lead && !lead.isDeleted;
   });
 
   const handleBulkDeleteSubmit = () => {
@@ -288,18 +322,8 @@ export default function AllLeadsPage() {
       return;
     }
     
-    selectedLeads.forEach(leadId => {
-      const lead = leads.find(l => l.id === leadId);
-      if (lead) {
-        if (lead.isDeleted) {
-          // Permanent deletion - actually remove from the system
-          setLeads(prev => prev.filter(l => l.id !== leadId));
-        } else {
-          // Regular deletion - mark as deleted
-          deleteLead(leadId);
-        }
-      }
-    });
+    // Always permanently delete all selected leads
+    setLeads(prev => prev.filter(lead => !selectedLeads.has(lead.id)));
     
     setShowBulkDeleteModal(false);
     setSelectedLeads(new Set());
@@ -326,6 +350,64 @@ export default function AllLeadsPage() {
       return newCount;
     });
   };
+
+  // Handle lead click
+  const handleLeadClick = (lead: any) => {
+    openModal(lead);
+  };
+
+  // Action buttons for the table
+  const renderActionButtons = (lead: any) => (
+    <div className="flex space-x-2">
+      {!lead.isDeleted && (
+        <>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              localStorage.setItem('editingLead', JSON.stringify(lead));
+              router.push(`/add-lead?mode=edit&id=${lead.id}`);
+            }}
+            className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-md transition-colors"
+          >
+            Edit
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteClick(lead);
+            }}
+            className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded-md transition-colors"
+          >
+            Delete
+          </button>
+        </>
+      )}
+      {lead.isDeleted && (
+        <>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRestoreClick(lead);
+            }}
+            className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded-md transition-colors"
+            title="Restore this lead to its original status"
+          >
+            Restore
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteClick(lead);
+            }}
+            className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded-md transition-colors"
+            title="Delete this lead permanently"
+          >
+            Delete
+          </button>
+        </>
+      )}
+    </div>
+  );
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -457,135 +539,36 @@ export default function AllLeadsPage() {
                     {selectedLeads.size === allLeads.length ? 'Deselect All' : 'Select All'}
                   </button>
                   {selectedLeads.size > 0 && (
-                    <button
-                      onClick={handleBulkDeleteClick}
-                      className="px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-                    >
-                      Delete Selected ({selectedLeads.size})
-                    </button>
+                    <>
+                      {hasActiveLeads && (
+                        <button
+                          onClick={handleBulkDeleteClick}
+                          className="px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                        >
+                          Delete Selected ({selectedLeads.size})
+                        </button>
+                      )}
+                      {hasDeletedLeads && (
+                        <button
+                          onClick={handleBulkRestoreClick}
+                          className="px-3 py-1 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                        >
+                          Restore Selected ({selectedLeads.size})
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
-              {allLeads.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                    </svg>
-                  </div>
-                  <p className="text-gray-500">No leads found in the system</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {allLeads.map((lead) => (
-                    <div 
-                      key={lead.id} 
-                      className="bg-gray-50 p-4 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
-                      onClick={() => openModal(lead)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3 flex-1">
-                          <input
-                            type="checkbox"
-                            checked={selectedLeads.has(lead.id)}
-                            onChange={(e) => {
-                              e.stopPropagation();
-                              handleSelectLead(lead.id);
-                            }}
-
-                            title="Select lead for bulk operations"
-                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                          />
-                          <div className="flex-1">
-                            <h3 className="font-medium text-black">{lead.clientName}</h3>
-                            <p className="text-sm font-medium text-black">{lead.company}</p>
-                            <p className="text-sm font-medium text-black">
-                            {lead.mobileNumbers && lead.mobileNumbers.length > 0 
-                              ? lead.mobileNumbers.find(m => m.isMain)?.number || lead.mobileNumbers[0]?.number || 'N/A'
-                              : lead.mobileNumber || 'N/A'
-                            }
-                          </p>
-                          <p className="text-sm font-medium text-black">
-                            Consumer Number: {lead.consumerNumber || 'N/A'}
-                          </p>
-                          {lead.followUpDate && (
-                            <p className="text-sm font-medium text-black">
-                              Follow-up: {(() => {
-                                // Convert yyyy-mm-dd to dd-mm-yyyy
-                                const dateParts = lead.followUpDate.split('-');
-                                if (dateParts.length === 3) {
-                                  return `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
-                                }
-                                return lead.followUpDate;
-                              })()}
-                            </p>
-                          )}
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            lead.status === 'New' ? 'bg-blue-100 text-blue-800' :
-                            lead.status === 'Contacted' ? 'bg-purple-100 text-purple-800' :
-                            lead.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' :
-                            lead.status === 'Follow-up' ? 'bg-orange-100 text-orange-800' :
-                            lead.status === 'Closed - Won' ? 'bg-green-100 text-green-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {lead.status}
-                          </span>
-                          {lead.isDeleted && (
-                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                              Deleted
-                            </span>
-                          )}
-                          {lead.isDone && !lead.isDeleted && (
-                            <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                              Completed
-                            </span>
-                          )}
-                          <div className="flex space-x-2">
-                            {!lead.isDeleted && (
-                              <>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    localStorage.setItem('editingLead', JSON.stringify(lead));
-                                    router.push(`/add-lead?mode=edit&id=${lead.id}`);
-                                  }}
-                                  className="px-3 py-1 bg-gray-600 text-white text-sm rounded-md hover:bg-gray-700 transition-colors"
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteClick(lead);
-                                  }}
-                                  className="px-3 py-1 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors"
-                                >
-                                  Delete
-                                </button>
-                              </>
-                            )}
-                            {lead.isDeleted && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteClick(lead);
-                                }}
-                                className="px-3 py-1 bg-red-800 text-white text-sm rounded-md hover:bg-red-900 transition-colors"
-                                title="Permanently delete this lead"
-                              >
-                                Permanently Delete
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <LeadTable
+                leads={allLeads}
+                onLeadClick={handleLeadClick}
+                selectedLeads={selectedLeads}
+                onLeadSelection={handleSelectLead}
+                showActions={true}
+                actionButtons={renderActionButtons}
+                emptyMessage="No leads found in the system"
+              />
             </div>
           )}
 
@@ -601,109 +584,36 @@ export default function AllLeadsPage() {
                     {selectedLeads.size === activeLeads.length ? 'Deselect All' : 'Select All'}
                   </button>
                   {selectedLeads.size > 0 && (
-                    <button
-                      onClick={handleBulkDeleteClick}
-                      className="px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-                    >
-                      Delete Selected ({selectedLeads.size})
-                    </button>
+                    <>
+                      {hasActiveLeads && (
+                        <button
+                          onClick={handleBulkDeleteClick}
+                          className="px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                        >
+                          Delete Selected ({selectedLeads.size})
+                        </button>
+                      )}
+                      {hasDeletedLeads && (
+                        <button
+                          onClick={handleBulkRestoreClick}
+                          className="px-3 py-1 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                        >
+                          Restore Selected ({selectedLeads.size})
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
-              {activeLeads.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <p className="text-gray-500">No active leads found</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {activeLeads.map((lead) => (
-                    <div 
-                      key={lead.id} 
-                      className="bg-gray-50 p-4 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors"
-                      onClick={() => openModal(lead)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3 flex-1">
-                          <input
-                            type="checkbox"
-                            checked={selectedLeads.has(lead.id)}
-                            onChange={(e) => {
-                              e.stopPropagation();
-                              handleSelectLead(lead.id);
-                            }}
-
-                            title="Select lead for bulk operations"
-                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
-                          />
-                          <div className="flex-1">
-                            <h3 className="font-medium text-black">{lead.clientName}</h3>
-                            <p className="text-sm font-medium text-black">{lead.company}</p>
-                            <p className="text-sm font-medium text-black">
-                            {lead.mobileNumbers && lead.mobileNumbers.length > 0 
-                              ? lead.mobileNumbers.find(m => m.isMain)?.number || lead.mobileNumbers[0]?.number || 'N/A'
-                              : lead.mobileNumber || 'N/A'
-                            }
-                          </p>
-                          <p className="text-sm font-medium text-black">
-                            Consumer Number: {lead.consumerNumber || 'N/A'}
-                          </p>
-                          {lead.followUpDate && (
-                            <p className="text-sm font-medium text-black">
-                              Follow-up: {(() => {
-                                // Convert yyyy-mm-dd to dd-mm-yyyy
-                                const dateParts = lead.followUpDate.split('-');
-                                if (dateParts.length === 3) {
-                                  return `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
-                                }
-                                return lead.followUpDate;
-                              })()}
-                            </p>
-                          )}
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            lead.status === 'New' ? 'bg-blue-100 text-blue-800' :
-                            lead.status === 'Contacted' ? 'bg-purple-100 text-purple-800' :
-                            lead.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' :
-                            lead.status === 'Follow-up' ? 'bg-orange-100 text-orange-800' :
-                            lead.status === 'Closed - Won' ? 'bg-green-100 text-green-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {lead.status}
-                          </span>
-                          <div className="flex space-x-2">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                localStorage.setItem('editingLead', JSON.stringify(lead));
-                                router.push(`/add-lead?mode=edit&id=${lead.id}`);
-                              }}
-                              className="px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
-                            >
-                              Update Status
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteClick(lead);
-                              }}
-                              className="px-3 py-1 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <LeadTable
+                leads={activeLeads}
+                onLeadClick={handleLeadClick}
+                selectedLeads={selectedLeads}
+                onLeadSelection={handleSelectLead}
+                showActions={true}
+                actionButtons={renderActionButtons}
+                emptyMessage="No active leads found"
+              />
             </div>
           )}
         </div>

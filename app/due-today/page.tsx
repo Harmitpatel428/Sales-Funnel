@@ -3,11 +3,13 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useLeads } from '../context/LeadContext';
 import { useRouter } from 'next/navigation';
+import LeadTable from '../components/LeadTable';
 
 export default function DueTodayPage() {
   const router = useRouter();
-  const { leads } = useLeads();
+  const { leads, deleteLead, setLeads } = useLeads();
   const [activeTab, setActiveTab] = useState<'today' | 'overdue'>('today');
+  const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
 
   // Handle URL parameters for tab selection
   useEffect(() => {
@@ -45,7 +47,7 @@ export default function DueTodayPage() {
     today.setHours(0, 0, 0, 0);
 
     return leads.filter(lead => {
-      if (lead.isDone || !lead.followUpDate) return false;
+      if (lead.isDeleted || lead.isDone || !lead.followUpDate) return false;
       
       const followUpDate = parseFollowUpDate(lead.followUpDate);
       if (!followUpDate) return false;
@@ -60,7 +62,7 @@ export default function DueTodayPage() {
     today.setHours(0, 0, 0, 0);
 
     return leads.filter(lead => {
-      if (lead.isDone || !lead.followUpDate) return false;
+      if (lead.isDeleted || lead.isDone || !lead.followUpDate) return false;
       
       const followUpDate = parseFollowUpDate(lead.followUpDate);
       if (!followUpDate) return false;
@@ -69,6 +71,63 @@ export default function DueTodayPage() {
       return followUpDate < today;
     });
   }, [leads]);
+
+  // Handle lead click
+  const handleLeadClick = (lead: any) => {
+    localStorage.setItem('editingLead', JSON.stringify(lead));
+    router.push(`/add-lead?mode=edit&id=${lead.id}`);
+  };
+
+  // Handle lead selection
+  const handleLeadSelection = (leadId: string, checked: boolean) => {
+    const newSelected = new Set(selectedLeads);
+    if (checked) {
+      newSelected.add(leadId);
+    } else {
+      newSelected.delete(leadId);
+    }
+    setSelectedLeads(newSelected);
+  };
+
+  // Handle select all
+  const handleSelectAll = (checked: boolean) => {
+    const currentLeads = activeTab === 'today' ? todayLeads : overdueLeads;
+    if (checked) {
+      setSelectedLeads(new Set(currentLeads.map(lead => lead.id)));
+    } else {
+      setSelectedLeads(new Set());
+    }
+  };
+
+  // Handle bulk delete - no password protection
+  const handleBulkDeleteClick = () => {
+    if (selectedLeads.size === 0) return;
+    
+    // Direct deletion without password protection
+    selectedLeads.forEach(leadId => {
+      deleteLead(leadId);
+    });
+    
+    setSelectedLeads(new Set());
+  };
+
+  // Action buttons for the table
+  const renderActionButtons = (lead: any) => (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        localStorage.setItem('editingLead', JSON.stringify(lead));
+        router.push(`/add-lead?mode=edit&id=${lead.id}`);
+      }}
+      className={`px-3 py-1 text-sm rounded-md transition-colors ${
+        activeTab === 'today' 
+          ? 'bg-yellow-600 hover:bg-yellow-700 text-white' 
+          : 'bg-red-600 hover:bg-red-700 text-white'
+      }`}
+    >
+      Update Status
+    </button>
+  );
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -150,133 +209,67 @@ export default function DueTodayPage() {
         <div className="p-6">
           {activeTab === 'today' && (
             <div>
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Due Today</h2>
-              {todayLeads.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <p className="text-gray-500">No leads with follow-ups due today</p>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-800">Due Today</h2>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => handleSelectAll(selectedLeads.size === todayLeads.length ? false : true)}
+                    className="px-3 py-1 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                  >
+                    {selectedLeads.size === todayLeads.length ? 'Deselect All' : 'Select All'}
+                  </button>
+                  {selectedLeads.size > 0 && (
+                    <button
+                      onClick={handleBulkDeleteClick}
+                      className="px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                    >
+                      Delete Selected ({selectedLeads.size})
+                    </button>
+                  )}
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {todayLeads.map((lead) => (
-                    <div key={lead.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-800">{lead.clientName}</h3>
-                          <p className="text-sm text-gray-600">{lead.company}</p>
-                          <p className="text-sm text-gray-500">
-                            {lead.mobileNumbers && lead.mobileNumbers.length > 0 
-                              ? lead.mobileNumbers.find(m => m.isMain)?.number || lead.mobileNumbers[0]?.number || 'N/A'
-                              : lead.mobileNumber || 'N/A'
-                            }
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            Follow-up: {(() => {
-                              const date = parseFollowUpDate(lead.followUpDate);
-                              return date ? date.toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric'
-                              }) : lead.followUpDate;
-                            })()}
-                          </p>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            lead.status === 'New' ? 'bg-blue-100 text-blue-800' :
-                            lead.status === 'Contacted' ? 'bg-purple-100 text-purple-800' :
-                            lead.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' :
-                            lead.status === 'Follow-up' ? 'bg-orange-100 text-orange-800' :
-                            lead.status === 'Closed - Won' ? 'bg-green-100 text-green-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {lead.status}
-                          </span>
-                          <button
-                            onClick={() => {
-                              localStorage.setItem('editingLead', JSON.stringify(lead));
-                              router.push(`/add-lead?mode=edit&id=${lead.id}`);
-                            }}
-                            className="px-3 py-1 bg-yellow-600 text-white text-sm rounded-md hover:bg-yellow-700 transition-colors"
-                          >
-                            Update Status
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              </div>
+              <LeadTable
+                leads={todayLeads}
+                onLeadClick={handleLeadClick}
+                selectedLeads={selectedLeads}
+                onLeadSelection={handleLeadSelection}
+                showActions={true}
+                actionButtons={renderActionButtons}
+                emptyMessage="No leads with follow-ups due today"
+              />
             </div>
           )}
 
           {activeTab === 'overdue' && (
             <div>
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Overdue Follow-ups</h2>
-              {overdueLeads.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
-                  </div>
-                  <p className="text-gray-500">No overdue follow-ups</p>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold text-gray-800">Overdue Follow-ups</h2>
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => handleSelectAll(selectedLeads.size === overdueLeads.length ? false : true)}
+                    className="px-3 py-1 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                  >
+                    {selectedLeads.size === overdueLeads.length ? 'Deselect All' : 'Select All'}
+                  </button>
+                  {selectedLeads.size > 0 && (
+                    <button
+                      onClick={handleBulkDeleteClick}
+                      className="px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                    >
+                      Delete Selected ({selectedLeads.size})
+                    </button>
+                  )}
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {overdueLeads.map((lead) => (
-                    <div key={lead.id} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-800">{lead.clientName}</h3>
-                          <p className="text-sm text-gray-600">{lead.company}</p>
-                          <p className="text-sm text-gray-500">
-                            {lead.mobileNumbers && lead.mobileNumbers.length > 0 
-                              ? lead.mobileNumbers.find(m => m.isMain)?.number || lead.mobileNumbers[0]?.number || 'N/A'
-                              : lead.mobileNumber || 'N/A'
-                            }
-                          </p>
-                          <p className="text-sm text-red-600 font-medium">
-                            Overdue since: {(() => {
-                              const date = parseFollowUpDate(lead.followUpDate);
-                              return date ? date.toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric'
-                              }) : lead.followUpDate;
-                            })()}
-                          </p>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            lead.status === 'New' ? 'bg-blue-100 text-blue-800' :
-                            lead.status === 'Contacted' ? 'bg-purple-100 text-purple-800' :
-                            lead.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' :
-                            lead.status === 'Follow-up' ? 'bg-orange-100 text-orange-800' :
-                            lead.status === 'Closed - Won' ? 'bg-green-100 text-green-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {lead.status}
-                          </span>
-                          <button
-                            onClick={() => {
-                              localStorage.setItem('editingLead', JSON.stringify(lead));
-                              router.push(`/add-lead?mode=edit&id=${lead.id}`);
-                            }}
-                            className="px-3 py-1 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 transition-colors"
-                          >
-                            Update Status
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              </div>
+              <LeadTable
+                leads={overdueLeads}
+                onLeadClick={handleLeadClick}
+                selectedLeads={selectedLeads}
+                onLeadSelection={handleLeadSelection}
+                showActions={true}
+                actionButtons={renderActionButtons}
+                emptyMessage="No overdue follow-ups"
+              />
             </div>
           )}
         </div>

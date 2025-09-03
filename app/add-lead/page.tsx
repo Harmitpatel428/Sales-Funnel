@@ -394,7 +394,7 @@ export default function AddLeadPage() {
           isUpdated: false,
           mandateStatus: 'Pending',
           documentStatus: formData.status === 'Mandate Sent' ? 'Signed Mandate' : 
-                         formData.status === 'Documentation' ? 'Pending Documents' : 'Pending Documents',
+                         formData.status === 'Documentation' ? 'Pending Documents' : undefined,
           activities: [{
             id: generateId(),
             leadId: leadId,

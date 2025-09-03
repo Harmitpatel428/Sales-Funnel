@@ -140,13 +140,14 @@ export function LeadProvider({ children }: { children: ReactNode }) {
   };
   
   const deleteLead = (id: string) => {
-    setLeads(prev =>
-      prev.map(lead => 
+    setLeads(prev => {
+      const updated = prev.map(lead => 
         lead.id === id 
           ? { ...lead, isDeleted: true, lastActivityDate: new Date().toISOString() }
           : lead
-      )
-    );
+      );
+      return updated;
+    });
   };
 
   const markAsDone = (id: string) => {
@@ -191,12 +192,6 @@ export function LeadProvider({ children }: { children: ReactNode }) {
       
       // Filter out completed leads (isDone: true)
       if (lead.isDone) {
-        return false;
-      }
-      
-      // Filter out updated leads (isUpdated: true) - but only when no specific status is selected
-      // This allows updated leads to appear when users click on specific status buttons
-      if (lead.isUpdated && (!filters.status || filters.status.length === 0)) {
         return false;
       }
       
