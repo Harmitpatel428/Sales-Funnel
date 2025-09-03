@@ -133,7 +133,7 @@ export default function DashboardPage() {
     let totalLeads = 0;
 
     leads.forEach(lead => {
-      // Count total active leads (not deleted, not done)
+
       if (!lead.isDeleted && !lead.isDone) {
         totalLeads++;
       }
