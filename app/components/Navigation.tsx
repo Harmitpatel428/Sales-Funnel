@@ -94,16 +94,6 @@ const Navigation = memo(function Navigation() {
                     })}
                   </div>
                 </div>
-                
-                {/* Seconds Countdown */}
-                <div className="flex flex-col items-center space-y-1">
-                  <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center shadow-md">
-                    <span className="text-xs font-bold text-white">
-                      {currentDateTime.getSeconds().toString().padStart(2, '0')}
-                    </span>
-                  </div>
-                  <div className="text-xs text-gray-400 font-medium">SEC</div>
-                </div>
               </div>
             </div>
           </div>
