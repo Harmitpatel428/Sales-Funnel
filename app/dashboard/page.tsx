@@ -1317,7 +1317,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Status Filter Buttons */}
-          <div className="bg-white p-4 rounded-lg shadow-md mb-6">
+          <div className="bg-gray-100 p-4 rounded-lg shadow-md mb-6">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold text-gray-800">Filter by Status</h3>
               <span className="text-sm text-gray-500">Click any status to filter leads</span>
