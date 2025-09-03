@@ -27,6 +27,8 @@ export default function DashboardPage() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
+  const [showEmptyStatusNotification, setShowEmptyStatusNotification] = useState(false);
+  const [emptyStatusMessage, setEmptyStatusMessage] = useState('');
 
 
 
@@ -1028,6 +1030,17 @@ export default function DashboardPage() {
 
   // Handle status filter
   const handleStatusFilter = (status: Lead['status']) => {
+    // Check if the status has zero leads
+    if (statusCounts[status] === 0) {
+      setEmptyStatusMessage(`Your ${status} lead is empty, please add lead to processed.`);
+      setShowEmptyStatusNotification(true);
+      // Auto-hide after 3 seconds
+      setTimeout(() => {
+        setShowEmptyStatusNotification(false);
+      }, 3000);
+      return;
+    }
+    
     setActiveFilters(prev => ({
       ...prev,
       status: [status]
@@ -1501,6 +1514,26 @@ export default function DashboardPage() {
               </svg>
               <span className="font-medium">No status selected - Click a status button to view leads (including updated ones)</span>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Empty Status Notification */}
+      {showEmptyStatusNotification && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-yellow-800">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <circle cx="10" cy="10" r="3" />
+              </svg>
+              <span className="font-medium">{emptyStatusMessage}</span>
+            </div>
+            <button
+              onClick={() => setShowEmptyStatusNotification(false)}
+              className="text-yellow-600 hover:text-yellow-800 text-sm font-medium"
+            >
+              Close
+            </button>
           </div>
         </div>
       )}
