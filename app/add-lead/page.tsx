@@ -814,8 +814,8 @@ export default function AddLeadPage() {
               name="notes"
               value={formData.notes}
               onChange={handleChange}
-              rows={5}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200 resize-vertical text-black"
+              rows={2}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200 resize-vertical text-black text-sm"
               placeholder="Enter details about the last discussion with this lead"
               disabled={isSubmitting}
             />

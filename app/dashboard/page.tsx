@@ -133,7 +133,6 @@ export default function DashboardPage() {
     let totalLeads = 0;
 
     leads.forEach(lead => {
-
       if (!lead.isDeleted && !lead.isDone) {
         totalLeads++;
       }
@@ -1845,7 +1844,7 @@ export default function DashboardPage() {
                       <div className="bg-gray-50 p-3 rounded-md">
                         <label className="block text-xs font-medium text-gray-600 mb-1">Last Discussion</label>
                         <p className="text-sm font-medium text-gray-900 line-clamp-3">{selectedLead.notes}</p>
-                    </div>
+                      </div>
                     )}
                     {selectedLead.finalConclusion && (
                       <div className="bg-gray-50 p-3 rounded-md">
