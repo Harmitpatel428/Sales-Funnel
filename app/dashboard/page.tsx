@@ -1322,8 +1322,8 @@ export default function DashboardPage() {
             <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500"></div>
             <div className="relative">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold text-gray-800">Filter by Status</h3>
-              <span className="text-sm text-gray-500">Click any status to filter leads</span>
+              <h3 className="text-lg font-semibold text-white">Filter by Status</h3>
+              <span className="text-sm text-white">Click any status to filter leads</span>
             </div>
             <div className="flex items-center gap-3 flex-wrap">
               <button
