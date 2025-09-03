@@ -272,6 +272,23 @@ export default function AddLeadPage() {
     }
   };
 
+  // Handle suggestion insertion for notes
+  const handleSuggestionClick = (suggestion: string) => {
+    setFormData(prev => ({
+      ...prev,
+      notes: suggestion
+    }));
+
+    // Clear error for notes field
+    if (errors.notes) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.notes;
+        return newErrors;
+      });
+    }
+  };
+
   // Handle form submission
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
@@ -798,6 +815,48 @@ export default function AddLeadPage() {
                 {errors.notes}
               </p>
             )}
+            
+            {/* Discussion Suggestions */}
+            <div className="mt-3">
+              <p className="text-sm text-gray-600 mb-2">Quick suggestions:</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleSuggestionClick("Call me after sometime I am busy right now.")}
+                  className="px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition-colors border border-blue-200"
+                >
+                  Call me after sometime I am busy right now.
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSuggestionClick("I need to discuss this with my partner or management")}
+                  className="px-3 py-1.5 text-xs bg-green-100 text-green-700 rounded-full hover:bg-green-200 transition-colors border border-green-200"
+                >
+                  I need to discuss this with my partner or management
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSuggestionClick("Send me details, I'll review")}
+                  className="px-3 py-1.5 text-xs bg-purple-100 text-purple-700 rounded-full hover:bg-purple-200 transition-colors border border-purple-200"
+                >
+                  Send me details, I'll review
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSuggestionClick("Connect with the number I am giving.")}
+                  className="px-3 py-1.5 text-xs bg-orange-100 text-orange-700 rounded-full hover:bg-orange-200 transition-colors border border-orange-200"
+                >
+                  Connect with the number I am giving.
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSuggestionClick("Send me your mandate.")}
+                  className="px-3 py-1.5 text-xs bg-red-100 text-red-700 rounded-full hover:bg-red-200 transition-colors border border-red-200"
+                >
+                  Send me your mandate.
+                </button>
+              </div>
+            </div>
           </div>
           
           {/* Form Actions */}
