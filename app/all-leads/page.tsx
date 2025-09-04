@@ -8,7 +8,7 @@ import * as XLSX from 'xlsx';
 
 export default function AllLeadsPage() {
   const router = useRouter();
-  const { leads, deleteLead, setLeads } = useLeads();
+  const { leads, setLeads } = useLeads();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -26,7 +26,6 @@ export default function AllLeadsPage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordChangeError, setPasswordChangeError] = useState('');
-  const [secretClickCount, setSecretClickCount] = useState(0);
   
   // Bulk delete states
   const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
@@ -259,17 +258,6 @@ export default function AllLeadsPage() {
     return lead?.isDeleted;
   });
 
-  // Check if any selected leads are not deleted
-  const hasActiveLeads = Array.from(selectedLeads).some(leadId => {
-    const lead = leads.find(l => l.id === leadId);
-    return lead && !lead.isDeleted;
-  });
-
-  // Check if any selected leads are not done
-  const hasNotDoneLeads = Array.from(selectedLeads).some(leadId => {
-    const lead = leads.find(l => l.id === leadId);
-    return lead && !lead.isDone;
-  });
 
   const handleBulkDeleteSubmit = () => {
     if (bulkDeletePassword !== DELETE_PASSWORD) {
@@ -294,16 +282,7 @@ export default function AllLeadsPage() {
 
   // Secret password change access
   const handleSecretClick = () => {
-    setSecretClickCount(prev => {
-      const newCount = prev + 1;
-      if (newCount >= 5) {
-        setShowPasswordChangeModal(true);
-        return 0; // Reset counter
-      }
-      // Reset counter after 3 seconds if not reached 5
-      setTimeout(() => setSecretClickCount(0), 3000);
-      return newCount;
-    });
+    setShowPasswordChangeModal(true);
   };
 
   // Handle lead click
@@ -323,7 +302,15 @@ export default function AllLeadsPage() {
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
       const sheetName = workbook.SheetNames[0];
+      if (!sheetName) {
+        alert('The file does not contain any worksheets.');
+        return;
+      }
       const worksheet = workbook.Sheets[sheetName];
+      if (!worksheet) {
+        alert('The worksheet could not be read.');
+        return;
+      }
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
       if (jsonData.length < 2) {
@@ -705,6 +692,7 @@ export default function AllLeadsPage() {
                   <button
                     onClick={() => setSearchTerm('')}
                     className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    title="Clear search"
                   >
                     <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

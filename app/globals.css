@@ -196,8 +196,8 @@ input, textarea, select, button {
 
 /* Glass Morphism Effects */
 .backdrop-blur-sm {
-  backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
 }
 
 /* Gradient Text */
