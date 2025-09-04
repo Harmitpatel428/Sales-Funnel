@@ -388,6 +388,7 @@ export default function DashboardPage() {
             console.log('Headers count:', headers.length);
             headers.forEach((header, index) => {
               console.log('Header ' + index + ': "' + header + '" (length: ' + (header ? header.length : 'undefined') + ')');
+              console.log('Header ' + index + ' lowercase: "' + (header ? header.toLowerCase() : 'undefined') + '"');
             });
             console.log('Data rows count:', dataRows.length);
             console.log('=== END EXCEL HEADERS DEBUG ===');
@@ -508,6 +509,7 @@ export default function DashboardPage() {
     console.log('Value: "' + value + '" (type: ' + typeof value + ')');
     console.log('Value length: ' + (value ? value.toString().length : 'undefined'));
     console.log('Is empty: ' + (!value || value === '' || value === null || value === undefined));
+    console.log('Processing header: ' + headerLower);
     
     switch (headerLower) {
       // Your Excel column headers - exact matches
@@ -586,12 +588,16 @@ export default function DashboardPage() {
       case 'leadstatus':
       case 'lead_status':
       case 'lead-status':
+        console.log('*** STATUS HEADER MATCHED ***');
         // Map your status values to valid enum values
-        const statusValue = String(value).toLowerCase();
+        const statusValue = String(value).toLowerCase().trim();
         console.log('=== STATUS MAPPING DEBUG ===');
         console.log('Original status value:', value);
         console.log('Lowercase status value:', statusValue);
         console.log('Header being processed:', header);
+        console.log('Header lowercase:', header.toLowerCase());
+        console.log('Value type:', typeof value);
+        console.log('Value length:', value ? value.toString().length : 'undefined');
         
         if (statusValue === 'new') {
           lead.status = 'New';
@@ -614,7 +620,7 @@ export default function DashboardPage() {
         } else if (statusValue === 'hotlead' || statusValue === 'hot lead') {
           lead.status = 'Hotlead';
           console.log('Mapped to: Hotlead');
-        } else if (statusValue === 'mandate sent' || statusValue === 'mandate sent & documentation' || statusValue === 'mandate sent and documentation' || statusValue === 'mandate sent & doc' || statusValue === 'mandate sent and doc') {
+        } else if (statusValue === 'mandate sent' || statusValue === 'mandate sent & documentation' || statusValue === 'mandate sent and documentation' || statusValue === 'mandate sent & doc' || statusValue === 'mandate sent and doc' || statusValue === 'mandatesent' || statusValue === 'mandate_sent' || statusValue === 'mandate-sent') {
           lead.status = 'Mandate Sent';
           console.log('Mapped to: Mandate Sent');
         } else if (statusValue === 'documentation') {
@@ -625,7 +631,7 @@ export default function DashboardPage() {
           console.log('Mapped to: Busy (legacy)');
         } else {
           lead.status = 'New';
-          console.log('Mapped to: New (default)');
+          console.log('Mapped to: New (default) - UNMATCHED STATUS VALUE:', statusValue);
         }
         console.log('Final lead status:', lead.status);
         console.log('=== END STATUS MAPPING DEBUG ===');
@@ -1253,6 +1259,44 @@ export default function DashboardPage() {
             className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md transition-colors"
           >
             Test Mandate Lead
+          </button>
+          
+          <button 
+            onClick={() => {
+              // Test the exact status mapping logic
+              const testLead: Lead = {
+                id: crypto.randomUUID(),
+                kva: 'Test Mandate Sent (lowercase)',
+                connectionDate: '01-01-2024',
+                consumerNumber: 'TEST-789-012',
+                company: 'Test Company',
+                clientName: 'Test Client',
+                mobileNumber: '987-654-3210',
+                mobileNumbers: [
+                  { id: '1', number: '987-654-3210', name: 'Test Contact', isMain: true },
+                  { id: '2', number: '', name: '', isMain: false },
+                  { id: '3', number: '', name: '', isMain: false }
+                ],
+                companyLocation: 'Test Address',
+                unitType: 'New',
+                status: 'Mandate Sent', // This should work
+                lastActivityDate: convertExcelDate(new Date()),
+                followUpDate: '',
+                notes: 'This is a test lead with Mandate Sent status (lowercase test)',
+                isDone: false,
+                isDeleted: false,
+                isUpdated: false,
+                mandateStatus: 'Pending',
+                documentStatus: 'Pending Documents'
+              };
+              console.log('Adding test Mandate Sent lead (lowercase):', testLead);
+              addLead(testLead);
+              console.log('Test Mandate Sent lead added, current leads count:', leads.length);
+              showToastNotification('Test Mandate Sent lead (lowercase) added successfully', 'success');
+            }}
+            className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-md transition-colors"
+          >
+            Test Mandate Sent (lowercase)
           </button>
 
           <label className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md transition-colors cursor-pointer">
