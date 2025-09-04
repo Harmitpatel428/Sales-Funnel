@@ -1217,6 +1217,43 @@ export default function DashboardPage() {
           >
             Test Add Lead
           </button>
+          
+          <button 
+            onClick={() => {
+              const testLead: Lead = {
+                id: crypto.randomUUID(),
+                kva: 'Test Mandate Lead',
+                connectionDate: '01-01-2024',
+                consumerNumber: 'TEST-123-456',
+                company: 'Test Company',
+                clientName: 'Test Client',
+                mobileNumber: '987-654-3210',
+                mobileNumbers: [
+                  { id: '1', number: '987-654-3210', name: 'Test Contact', isMain: true },
+                  { id: '2', number: '', name: '', isMain: false },
+                  { id: '3', number: '', name: '', isMain: false }
+                ],
+                companyLocation: 'Test Address',
+                unitType: 'New',
+                status: 'Mandate Sent',
+                lastActivityDate: convertExcelDate(new Date()),
+                followUpDate: '',
+                notes: 'This is a test lead with Mandate Sent status',
+                isDone: false,
+                isDeleted: false,
+                isUpdated: false,
+                mandateStatus: 'Pending',
+                documentStatus: 'Pending Documents'
+              };
+              console.log('Adding test Mandate Sent lead:', testLead);
+              addLead(testLead);
+              console.log('Test Mandate Sent lead added, current leads count:', leads.length);
+              showToastNotification('Test Mandate Sent lead added successfully', 'success');
+            }}
+            className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md transition-colors"
+          >
+            Test Mandate Lead
+          </button>
 
           <label className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md transition-colors cursor-pointer">
             Import Excel/CSV
