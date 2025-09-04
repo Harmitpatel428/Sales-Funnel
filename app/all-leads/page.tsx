@@ -9,7 +9,6 @@ import * as XLSX from 'xlsx';
 export default function AllLeadsPage() {
   const router = useRouter();
   const { leads, deleteLead, setLeads } = useLeads();
-  const [activeTab, setActiveTab] = useState<'all' | 'active'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -34,6 +33,7 @@ export default function AllLeadsPage() {
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [bulkDeletePassword, setBulkDeletePassword] = useState('');
   const [bulkDeleteError, setBulkDeleteError] = useState('');
+  
   
   // Password for deletion (stored in localStorage)
   const [DELETE_PASSWORD, setDELETE_PASSWORD] = useState(() => {
@@ -110,57 +110,6 @@ export default function AllLeadsPage() {
     });
   }, [leads, searchTerm]);
 
-  const activeLeads = useMemo(() => {
-    let filtered = leads.filter(lead => !lead.isDone && !lead.isDeleted); // Show only non-completed and non-deleted leads
-    
-    if (searchTerm) {
-      filtered = filtered.filter(lead => {
-        const searchLower = searchTerm.toLowerCase();
-        
-        // Check if it's a phone number search (only digits)
-        if (/^\d+$/.test(searchTerm)) {
-          const allMobileNumbers = [
-            lead.mobileNumber,
-            ...(lead.mobileNumbers || []).map(m => m.number)
-          ];
-          
-          for (const mobileNumber of allMobileNumbers) {
-            if (mobileNumber) {
-              const phoneDigits = mobileNumber.replace(/[^0-9]/g, '');
-              if (phoneDigits.includes(searchTerm)) {
-                return true;
-              }
-            }
-          }
-        }
-        
-        // Regular text search
-        const allMobileNumbers = [
-          lead.mobileNumber,
-          ...(lead.mobileNumbers || []).map(m => m.number)
-        ].filter(Boolean);
-        
-        const allMobileNames = (lead.mobileNumbers || []).map(m => m.name).filter(Boolean);
-        
-        const searchableFields = [
-          lead.clientName,
-          lead.company,
-          ...allMobileNumbers,
-          ...allMobileNames,
-          lead.consumerNumber,
-          lead.kva,
-          lead.companyLocation,
-          lead.notes,
-          lead.finalConclusion,
-          lead.status
-        ].filter(Boolean).map(field => field?.toLowerCase());
-        
-        return searchableFields.some(field => field?.includes(searchLower));
-      });
-    }
-    
-    return filtered;
-  }, [leads, searchTerm]);
 
   // Modal functions
   const openModal = (lead: Lead) => {
@@ -271,11 +220,10 @@ export default function AllLeadsPage() {
   };
 
   const handleSelectAll = () => {
-    const currentLeads = activeTab === 'all' ? allLeads : activeLeads;
-    if (selectedLeads.size === currentLeads.length) {
+    if (selectedLeads.size === allLeads.length) {
       setSelectedLeads(new Set());
     } else {
-      setSelectedLeads(new Set(currentLeads.map(lead => lead.id)));
+      setSelectedLeads(new Set(allLeads.map(lead => lead.id)));
     }
   };
 
@@ -403,20 +351,21 @@ export default function AllLeadsPage() {
           companyLocation: '',
           notes: '',
           status: 'New',
-          unitType: '',
+          unitType: 'New',
           followUpDate: '',
           lastActivityDate: new Date().toLocaleDateString('en-GB'),
           isDone: false,
           isDeleted: false,
+          isUpdated: false,
           activities: [],
-          mandateStatus: '',
-          documentStatus: '',
+          mandateStatus: 'Pending',
+          documentStatus: 'Pending Documents',
           finalConclusion: ''
         };
 
         // Map headers to lead fields
         headers.forEach((header, colIndex) => {
-          if (!header || colIndex >= row.length) return;
+          if (!header || colIndex >= row.length || colIndex < 0) return;
 
           const value = row[colIndex];
           if (!value || value.toString().trim() === '') return;
@@ -435,6 +384,7 @@ export default function AllLeadsPage() {
               if (!lead.mobileNumbers) lead.mobileNumbers = [];
               const isMain = lead.mobileNumbers.length === 0;
               lead.mobileNumbers.push({
+                id: `mobile-${Date.now()}-${index}`,
                 number: valueStr,
                 name: '',
                 isMain: isMain
@@ -445,6 +395,7 @@ export default function AllLeadsPage() {
               if (!lead.mobileNumbers) lead.mobileNumbers = [];
               if (lead.mobileNumbers.length === 0) {
                 lead.mobileNumbers.push({
+                  id: `mobile-${Date.now()}-${index}`,
                   number: valueStr,
                   name: '',
                   isMain: true
@@ -467,15 +418,15 @@ export default function AllLeadsPage() {
             if (statusValue.includes('mandate sent') || statusValue.includes('documentation')) {
               lead.status = 'Mandate Sent';
             } else if (statusValue.includes('contacted')) {
-              lead.status = 'Contacted';
+              lead.status = 'New';
             } else if (statusValue.includes('progress')) {
-              lead.status = 'In Progress';
+              lead.status = 'Follow-up';
             } else if (statusValue.includes('follow')) {
               lead.status = 'Follow-up';
             } else if (statusValue.includes('closed') || statusValue.includes('won')) {
-              lead.status = 'Closed - Won';
+              lead.status = 'Deal Close';
             } else {
-              lead.status = valueStr;
+              lead.status = 'New';
             }
           } else if (headerLower.includes('unit') || headerLower.includes('type')) {
             lead.unitType = valueStr;
@@ -509,8 +460,8 @@ export default function AllLeadsPage() {
 
   // Export function (copied from dashboard)
   const handleExportCSV = () => {
-    // Get filtered leads based on current tab
-    const leadsToExport = activeTab === 'all' ? allLeads : activeLeads;
+    // Get filtered leads
+    const leadsToExport = allLeads;
     
     // Define CSV headers with remapped column names for export
     const headers = [
@@ -572,7 +523,7 @@ export default function AllLeadsPage() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `leads-export-${activeTab}-${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `leads-export-all-${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -635,240 +586,170 @@ export default function AllLeadsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
+      <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-800 rounded-lg mb-8 p-8">
+        {/* Title Section */}
+        <div className="text-center mb-6">
           <h1 
-            className="text-3xl font-bold text-white cursor-pointer select-none"
+            className="text-4xl md:text-5xl font-bold text-white cursor-pointer select-none mb-2"
             onClick={handleSecretClick}
             title="Click 5 times quickly to access password change"
           >
             All Leads
           </h1>
-          <p className="text-white mt-2">View and manage all leads in your system</p>
+          <p className="text-blue-100 text-sm font-medium">
+            🚷 This page is strictly reserved for Admins Anil Patel & Jitendra Patel - unauthorized access will be monitored.
+          </p>
         </div>
-        <div className="flex items-center space-x-3">
-          {/* Import Button */}
-          <div className="relative">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls,.xlsm,.csv"
-              onChange={handleFileImport}
-              className="hidden"
-              id="file-import"
-            />
-            <label
-              htmlFor="file-import"
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md transition-colors cursor-pointer flex items-center space-x-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-              </svg>
-              <span>Import Leads</span>
-            </label>
+        
+        {/* Stats and Action Buttons */}
+        <div className="flex flex-col lg:flex-row items-center justify-between space-y-4 lg:space-y-0 lg:space-x-6">
+          {/* Total Leads Stat Box - Enhanced */}
+          <div className="relative group">
+            {/* Animated Border Glow */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-emerald-400 via-blue-500 to-purple-500 rounded-2xl blur-sm opacity-0 group-hover:opacity-25 transition-all duration-600 animate-pulse"></div>
+            
+            {/* Main Container */}
+            <div className="relative bg-white border-2 border-blue-200 rounded-2xl px-16 py-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:border-blue-300 overflow-hidden">
+              {/* Animated Background Waves */}
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-50/40 via-emerald-50/20 to-purple-50/40 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              
+              {/* Floating Dots */}
+              <div className="absolute top-4 right-4 w-1 h-1 bg-emerald-400 rounded-full opacity-0 group-hover:opacity-70 animate-bounce animation-delay-1000"></div>
+              <div className="absolute bottom-4 left-4 w-1 h-1 bg-blue-400 rounded-full opacity-0 group-hover:opacity-70 animate-bounce animation-delay-2000"></div>
+              <div className="absolute top-1/2 right-6 w-0.5 h-0.5 bg-purple-400 rounded-full opacity-0 group-hover:opacity-70 animate-bounce animation-delay-3000"></div>
+              
+              {/* Content */}
+              <div className="relative z-10 text-center">
+                <div className="text-4xl md:text-5xl font-bold text-blue-600 mb-2 group-hover:text-blue-700 transition-colors duration-300 group-hover:scale-105 transform transition-transform duration-300">
+                  {allLeads.length}
+                </div>
+                <div className="text-gray-600 text-sm font-semibold uppercase tracking-wide group-hover:text-gray-700 transition-colors duration-300">
+                  Total Leads
+                </div>
+              </div>
+              
+              {/* Top and Bottom Accent Lines */}
+              <div className="absolute top-0 left-1/2 right-1/2 h-0.5 bg-gradient-to-r from-emerald-400 to-blue-500 transform -translate-x-1/2 scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-center"></div>
+              <div className="absolute bottom-0 left-1/2 right-1/2 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 transform -translate-x-1/2 scale-x-0 group-hover:scale-x-100 transition-transform duration-500 origin-center"></div>
+              
+              {/* Side Accent Lines */}
+              <div className="absolute top-1/2 left-0 w-0.5 h-8 bg-gradient-to-b from-emerald-400 to-blue-500 transform -translate-y-1/2 scale-y-0 group-hover:scale-y-100 transition-transform duration-500 origin-center"></div>
+              <div className="absolute top-1/2 right-0 w-0.5 h-8 bg-gradient-to-b from-blue-500 to-purple-500 transform -translate-y-1/2 scale-y-0 group-hover:scale-y-100 transition-transform duration-500 origin-center"></div>
+            </div>
           </div>
           
-          {/* Export Button */}
-          <button
-            onClick={handleExportCSV}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors flex items-center space-x-2"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <span>Export {activeTab === 'all' ? 'All' : 'Active'} Leads</span>
-          </button>
-          
-          <button 
-            onClick={() => router.push('/dashboard')}
-            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md transition-colors"
-          >
-            Back to Dashboard
-          </button>
-        </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-400">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-black">Total Leads</h3>
-              <p className="text-3xl font-bold text-blue-600">{allLeads.length}</p>
-              <p className="text-sm text-black mt-1">All leads ever added to the system</p>
-            </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-green-400">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-black">Active Leads</h3>
-              <p className="text-3xl font-bold text-green-600">{activeLeads.length}</p>
-              <p className="text-sm text-black mt-1">Leads that are not completed</p>
-            </div>
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Search Filter */}
-      <div className="bg-white rounded-lg shadow-md mb-6 p-6">
-        <div className="flex items-center space-x-4">
-          <div className="flex-1">
-            <label htmlFor="search" className="block text-sm font-medium text-black mb-2">
-              Search Leads
-            </label>
+          {/* Action Buttons */}
+          <div className="flex flex-wrap justify-center items-center space-x-4">
+            {/* Import Button */}
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </div>
               <input
-                id="search"
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search by name, company, phone, consumer number, status..."
-                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls,.xlsm,.csv"
+                onChange={handleFileImport}
+                className="hidden"
+                id="file-import"
               />
+              <label
+                htmlFor="file-import"
+                className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl cursor-pointer flex items-center space-x-2 font-semibold transition-colors shadow-lg"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                </svg>
+                <span>Import Leads</span>
+              </label>
             </div>
-          </div>
-          {searchTerm && (
+            
+            {/* Export Button */}
             <button
-              onClick={() => setSearchTerm('')}
-              className="mt-6 px-3 py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              onClick={handleExportCSV}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl flex items-center space-x-2 font-semibold transition-colors shadow-lg"
             >
-              Clear
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span>Export All Leads</span>
             </button>
-          )}
+            
+          </div>
         </div>
       </div>
 
-      {/* Tab Navigation */}
+
+
+      {/* Leads Table */}
       <div className="bg-white rounded-lg shadow-md mb-6">
-        <div className="border-b border-gray-200">
-          <nav className="flex space-x-8 px-6">
-            <button
-              onClick={() => setActiveTab('all')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'all'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              All Leads ({allLeads.length})
-            </button>
-            <button
-              onClick={() => setActiveTab('active')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'active'
-                  ? 'border-green-500 text-green-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Active Leads ({activeLeads.length})
-            </button>
-          </nav>
-        </div>
-
-        {/* Tab Content */}
         <div className="p-6">
-          {activeTab === 'all' && (
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-black">All Leads</h2>
-                <div className="flex items-center space-x-3">
-                  <button
-                    onClick={handleSelectAll}
-                    className="px-3 py-1 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
-                  >
-                    {selectedLeads.size === allLeads.length ? 'Deselect All' : 'Select All'}
-                  </button>
-                  {selectedLeads.size > 0 && (
-                    <>
-                      <button
-                        onClick={handleBulkDeleteClick}
-                        className="px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-                      >
-                        Delete Selected ({selectedLeads.size})
-                      </button>
-                      {hasDeletedLeads && (
-                        <button
-                          onClick={handleBulkRestoreClick}
-                          className="px-3 py-1 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-                        >
-                          Restore Selected ({selectedLeads.size})
-                        </button>
-                      )}
-                    </>
-                  )}
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center space-x-4">
+              <h2 className="text-xl font-semibold text-black">All Leads</h2>
+              
+              {/* Search Input */}
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
                 </div>
-              </div>
-              <LeadTable
-                leads={allLeads}
-                onLeadClick={handleLeadClick}
-                selectedLeads={selectedLeads}
-                onLeadSelection={handleSelectLead}
-                showActions={true}
-                actionButtons={renderActionButtons}
-                emptyMessage="No leads found in the system"
-              />
-            </div>
-          )}
-
-          {activeTab === 'active' && (
-            <div>
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-black">Active Leads</h2>
-                <div className="flex items-center space-x-3">
+                <input
+                  id="search"
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search leads..."
+                  className="block w-64 pl-9 pr-3 py-1.5 border border-gray-300 rounded-md leading-5 bg-white placeholder-black focus:outline-none focus:placeholder-black focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+                {searchTerm && (
                   <button
-                    onClick={handleSelectAll}
-                    className="px-3 py-1 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                    onClick={() => setSearchTerm('')}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
-                    {selectedLeads.size === activeLeads.length ? 'Deselect All' : 'Select All'}
+                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                   </button>
-                  {selectedLeads.size > 0 && (
-                    <>
-                      <button
-                        onClick={handleBulkDeleteClick}
-                        className="px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-                      >
-                        Delete Selected ({selectedLeads.size})
-                      </button>
-                      {hasDeletedLeads && (
-                        <button
-                          onClick={handleBulkRestoreClick}
-                          className="px-3 py-1 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-                        >
-                          Restore Selected ({selectedLeads.size})
-                        </button>
-                      )}
-                    </>
-                  )}
-                </div>
+                )}
               </div>
-              <LeadTable
-                leads={activeLeads}
-                onLeadClick={handleLeadClick}
-                selectedLeads={selectedLeads}
-                onLeadSelection={handleSelectLead}
-                showActions={true}
-                actionButtons={renderActionButtons}
-                emptyMessage="No active leads found"
-              />
             </div>
-          )}
+            
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={handleSelectAll}
+                className="px-3 py-1 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700"
+              >
+                {selectedLeads.size === allLeads.length ? 'Deselect All' : 'Select All'}
+              </button>
+              {selectedLeads.size > 0 && (
+                <>
+                  <button
+                    onClick={handleBulkDeleteClick}
+                    className="px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700"
+                  >
+                    Delete Selected ({selectedLeads.size})
+                  </button>
+                  {hasDeletedLeads && (
+                    <button
+                      onClick={handleBulkRestoreClick}
+                      className="px-3 py-1 text-sm bg-green-600 text-white rounded-md hover:bg-green-700"
+                    >
+                      Restore Selected ({selectedLeads.size})
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+          <LeadTable
+            leads={allLeads}
+            onLeadClick={handleLeadClick}
+            selectedLeads={selectedLeads}
+            onLeadSelection={handleSelectLead}
+            showActions={true}
+            actionButtons={renderActionButtons}
+            emptyMessage="No leads found in the system"
+          />
         </div>
       </div>
 
@@ -1017,11 +898,15 @@ export default function AllLeadsPage() {
                     <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                       selectedLead.status === 'New' ? 'bg-blue-100 text-blue-800' :
-                      selectedLead.status === 'Contacted' ? 'bg-purple-100 text-purple-800' :
-                      selectedLead.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' :
+                      selectedLead.status === 'CNR' ? 'bg-purple-100 text-purple-800' :
+                      selectedLead.status === 'Busy' ? 'bg-yellow-100 text-yellow-800' :
                       selectedLead.status === 'Follow-up' ? 'bg-orange-100 text-orange-800' :
-                      selectedLead.status === 'Closed - Won' ? 'bg-green-100 text-green-800' :
-                      'bg-red-100 text-red-800'
+                      selectedLead.status === 'Deal Close' ? 'bg-green-100 text-green-800' :
+                      selectedLead.status === 'Work Alloted' ? 'bg-indigo-100 text-indigo-800' :
+                      selectedLead.status === 'Hotlead' ? 'bg-red-100 text-red-800' :
+                      selectedLead.status === 'Mandate Sent' ? 'bg-emerald-100 text-emerald-800' :
+                      selectedLead.status === 'Documentation' ? 'bg-teal-100 text-teal-800' :
+                      'bg-gray-100 text-gray-800'
                     }`}>
                       {selectedLead.status}
                     </span>
