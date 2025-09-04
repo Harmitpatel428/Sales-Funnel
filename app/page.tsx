@@ -59,20 +59,6 @@ export default function HomePage() {
             </p>
           </button>
 
-          <button 
-            onClick={() => router.push('/reminders')}
-            className="bg-gray-900 rounded-lg shadow-lg p-8 text-center border border-gray-700 hover:border-blue-500 hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1"
-          >
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <h3 className="text-xl font-bold text-white mb-3">Follow-up Tracking</h3>
-            <p className="text-gray-300">
-              Never miss a follow-up with automated reminders and organized tracking of all your lead interactions.
-            </p>
-          </button>
 
           <button 
             onClick={() => router.push('/follow-up-mandate')}
@@ -155,13 +141,6 @@ export default function HomePage() {
               <div className="text-sm text-gray-600 mt-1">View all leads</div>
             </button>
             
-            <button
-              onClick={() => router.push('/reminders')}
-              className="p-4 bg-yellow-50 hover:bg-yellow-100 rounded-lg border border-yellow-200 transition-colors duration-200"
-            >
-              <div className="text-yellow-600 font-semibold">🔔 Reminders</div>
-              <div className="text-sm text-gray-600 mt-1">Check follow-ups</div>
-            </button>
           </div>
         </div>
       </div>

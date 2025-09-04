@@ -50,14 +50,6 @@ const Navigation = memo(function Navigation() {
             >
               Add Lead
             </Link>
-            <Link 
-              href="/reminders"
-              className={`px-4 py-2 rounded-md font-medium transition-all duration-300 ${pathname === '/reminders' 
-                ? 'bg-purple-100 text-purple-700 shadow-sm' 
-                : 'text-gray-600 hover:text-purple-700 hover:bg-purple-50'}`}
-            >
-              Reminders
-            </Link>
           </div>
           
           {/* Perfect Real-time Date & Time */}
