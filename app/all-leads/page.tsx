@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useLeads, Lead } from '../context/LeadContext';
 import { useRouter } from 'next/navigation';
 import LeadTable from '../components/LeadTable';
+import * as XLSX from 'xlsx';
 
 export default function AllLeadsPage() {
   const router = useRouter();
@@ -362,6 +363,222 @@ export default function AllLeadsPage() {
     openModal(lead);
   };
 
+  // File input ref for import
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Import function (copied from dashboard)
+  const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      if (jsonData.length < 2) {
+        alert('The file appears to be empty or has no data rows.');
+        return;
+      }
+
+      const headers = jsonData[0] as string[];
+      const rows = jsonData.slice(1) as any[][];
+
+      const newLeads: Lead[] = [];
+
+      rows.forEach((row, index) => {
+        if (row.every(cell => !cell || cell.toString().trim() === '')) return;
+
+        const lead: Lead = {
+          id: `imported-${Date.now()}-${index}`,
+          clientName: '',
+          company: '',
+          mobileNumber: '',
+          mobileNumbers: [],
+          consumerNumber: '',
+          kva: '',
+          connectionDate: '',
+          companyLocation: '',
+          notes: '',
+          status: 'New',
+          unitType: '',
+          followUpDate: '',
+          lastActivityDate: new Date().toLocaleDateString('en-GB'),
+          isDone: false,
+          isDeleted: false,
+          activities: [],
+          mandateStatus: '',
+          documentStatus: '',
+          finalConclusion: ''
+        };
+
+        // Map headers to lead fields
+        headers.forEach((header, colIndex) => {
+          if (!header || colIndex >= row.length) return;
+
+          const value = row[colIndex];
+          if (!value || value.toString().trim() === '') return;
+
+          const headerLower = header.toString().toLowerCase().trim();
+          const valueStr = value.toString().trim();
+
+          // Map headers to lead properties
+          if (headerLower.includes('client') || headerLower.includes('name')) {
+            lead.clientName = valueStr;
+          } else if (headerLower.includes('company')) {
+            lead.company = valueStr;
+          } else if (headerLower.includes('mobile') || headerLower.includes('phone') || headerLower.includes('contact')) {
+            if (headerLower.includes('2') || headerLower.includes('3')) {
+              // Additional mobile numbers
+              if (!lead.mobileNumbers) lead.mobileNumbers = [];
+              const isMain = lead.mobileNumbers.length === 0;
+              lead.mobileNumbers.push({
+                number: valueStr,
+                name: '',
+                isMain: isMain
+              });
+            } else {
+              // Main mobile number
+              lead.mobileNumber = valueStr;
+              if (!lead.mobileNumbers) lead.mobileNumbers = [];
+              if (lead.mobileNumbers.length === 0) {
+                lead.mobileNumbers.push({
+                  number: valueStr,
+                  name: '',
+                  isMain: true
+                });
+              }
+            }
+          } else if (headerLower.includes('consumer') || headerLower.includes('con.no')) {
+            lead.consumerNumber = valueStr;
+          } else if (headerLower.includes('kva')) {
+            lead.kva = valueStr;
+          } else if (headerLower.includes('connection') && headerLower.includes('date')) {
+            lead.connectionDate = valueStr;
+          } else if (headerLower.includes('location') || headerLower.includes('address')) {
+            lead.companyLocation = valueStr;
+          } else if (headerLower.includes('notes') || headerLower.includes('discussion') || headerLower.includes('comment')) {
+            lead.notes = valueStr;
+          } else if (headerLower.includes('status') || headerLower.includes('old') || headerLower.includes('new')) {
+            // Handle status mapping
+            const statusValue = valueStr.toLowerCase();
+            if (statusValue.includes('mandate sent') || statusValue.includes('documentation')) {
+              lead.status = 'Mandate Sent';
+            } else if (statusValue.includes('contacted')) {
+              lead.status = 'Contacted';
+            } else if (statusValue.includes('progress')) {
+              lead.status = 'In Progress';
+            } else if (statusValue.includes('follow')) {
+              lead.status = 'Follow-up';
+            } else if (statusValue.includes('closed') || statusValue.includes('won')) {
+              lead.status = 'Closed - Won';
+            } else {
+              lead.status = valueStr;
+            }
+          } else if (headerLower.includes('unit') || headerLower.includes('type')) {
+            lead.unitType = valueStr;
+          } else if (headerLower.includes('follow') && headerLower.includes('date')) {
+            lead.followUpDate = valueStr;
+          }
+        });
+
+        // Only add if we have at least a client name
+        if (lead.clientName) {
+          newLeads.push(lead);
+        }
+      });
+
+      if (newLeads.length > 0) {
+        setLeads(prev => [...prev, ...newLeads]);
+        alert(`Successfully imported ${newLeads.length} leads!`);
+      } else {
+        alert('No valid leads found in the file.');
+      }
+    } catch (error) {
+      console.error('Error importing file:', error);
+      alert('Error importing file. Please check the file format and try again.');
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Export function (copied from dashboard)
+  const handleExportCSV = () => {
+    // Get filtered leads based on current tab
+    const leadsToExport = activeTab === 'all' ? allLeads : activeLeads;
+    
+    // Define CSV headers with remapped column names for export
+    const headers = [
+      'con.no', 
+      'KVA', 
+      'Connection Date', 
+      'Company Name', 
+      'Client Name', 
+      'Main Mobile Number', 
+      'Lead Status', 
+      'Last Discussion', 
+      'Address',
+      'Next Follow-up Date',
+      'Mobile Number 2', 
+      'Contact Name 2', 
+      'Mobile Number 3', 
+      'Contact Name 3'
+    ];
+    
+    // Convert leads to CSV rows with remapped data
+    const rows = leadsToExport.map(lead => {
+      // Get mobile numbers and contacts
+      const mobileNumbers = lead.mobileNumbers || [];
+      const mainMobile = mobileNumbers.find(m => m.isMain) || mobileNumbers[0] || { number: lead.mobileNumber || '', name: '' };
+      const mobile2 = mobileNumbers[1] || { number: '', name: '' };
+      const mobile3 = mobileNumbers[2] || { number: '', name: '' };
+      
+      // Format main mobile number with contact name if available
+      const mainMobileDisplay = mainMobile.name 
+        ? `${mainMobile.number} (${mainMobile.name})` 
+        : mainMobile.number || '';
+      
+      return [
+        lead.consumerNumber || '',
+        lead.kva || '',
+        lead.connectionDate && lead.connectionDate.trim() !== '' ? lead.connectionDate : '',
+        lead.company || '',
+        lead.clientName || '',
+        mainMobileDisplay, // Main Mobile Number (with contact name if available)
+        lead.status || 'New', // Lead Status
+        lead.notes || '', // Last Discussion
+        lead.companyLocation || (lead.notes && lead.notes.includes('Address:') ? lead.notes.split('Address:')[1]?.trim() || '' : ''), // Address
+        lead.followUpDate || '', // Next Follow-up Date
+        mobile2.number || '', // Mobile Number 2
+        mobile2.name || '', // Contact Name 2
+        mobile3.number || '', // Mobile Number 3
+        mobile3.name || '' // Contact Name 3
+      ];
+    });
+    
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+    
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `leads-export-${activeTab}-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Action buttons for the table
   const renderActionButtons = (lead: any) => (
     <div className="flex space-x-2">
@@ -429,12 +646,46 @@ export default function AllLeadsPage() {
           </h1>
           <p className="text-white mt-2">View and manage all leads in your system</p>
         </div>
-        <button 
-          onClick={() => router.push('/dashboard')}
-          className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md transition-colors"
-        >
-          Back to Dashboard
-        </button>
+        <div className="flex items-center space-x-3">
+          {/* Import Button */}
+          <div className="relative">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls,.xlsm,.csv"
+              onChange={handleFileImport}
+              className="hidden"
+              id="file-import"
+            />
+            <label
+              htmlFor="file-import"
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md transition-colors cursor-pointer flex items-center space-x-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+              </svg>
+              <span>Import Leads</span>
+            </label>
+          </div>
+          
+          {/* Export Button */}
+          <button
+            onClick={handleExportCSV}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors flex items-center space-x-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span>Export {activeTab === 'all' ? 'All' : 'Active'} Leads</span>
+          </button>
+          
+          <button 
+            onClick={() => router.push('/dashboard')}
+            className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md transition-colors"
+          >
+            Back to Dashboard
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}

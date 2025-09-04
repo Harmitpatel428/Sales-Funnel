@@ -560,6 +560,7 @@ export default function DashboardPage() {
       case 'company location':
       case 'companylocation':
       case 'location':
+      case 'address':
         lead.companyLocation = String(value);
         break;
       case 'client name':
@@ -722,12 +723,8 @@ export default function DashboardPage() {
         }
         break;
       case 'address':
-        // Append address to notes if notes exist, otherwise create notes
-        if (lead.notes) {
-          lead.notes = `${lead.notes} | Address: ${String(value)}`;
-        } else {
-          lead.notes = `Address: ${String(value)}`;
-        }
+        // Map address to companyLocation field (this will be handled by the company location case above)
+        // This case is now redundant since 'address' is handled in the company location section
         break;
       case 'last activity date':
       case 'lastactivitydate':
@@ -964,24 +961,54 @@ export default function DashboardPage() {
     // Get filtered leads based on current view
     const leadsToExport = getFilteredLeads(activeFilters);
     
-    // Define CSV headers - matching your Excel format exactly
+    // Define CSV headers with remapped column names for export
     const headers = [
-      'con.no', 'KVA', 'Connection Date', 'Company Name', 'Client Name', 'Mo.no', 'Old //New', 'Marking call date 1 april 25', 'Address'
+      'con.no', 
+      'KVA', 
+      'Connection Date', 
+      'Company Name', 
+      'Client Name', 
+      'Main Mobile Number', 
+      'Lead Status', 
+      'Last Discussion', 
+      'Address',
+      'Next Follow-up Date',
+      'Mobile Number 2', 
+      'Contact Name 2', 
+      'Mobile Number 3', 
+      'Contact Name 3'
     ];
     
-    // Convert leads to CSV rows - matching your Excel format exactly
-    const rows = leadsToExport.map(lead => [
-      lead.consumerNumber || '',
-      lead.kva || '',
-      lead.connectionDate && lead.connectionDate.trim() !== '' ? lead.connectionDate : '',
-      lead.company || '',
-      lead.clientName || '',
-      lead.mobileNumber || '',
-      lead.status || 'New',
-      lead.notes || '',
-      // Extract address from notes if it exists
-      lead.notes && lead.notes.includes('Address:') ? lead.notes.split('Address:')[1]?.trim() || '' : ''
-    ]);
+    // Convert leads to CSV rows with remapped data
+    const rows = leadsToExport.map(lead => {
+      // Get mobile numbers and contacts
+      const mobileNumbers = lead.mobileNumbers || [];
+      const mainMobile = mobileNumbers.find(m => m.isMain) || mobileNumbers[0] || { number: lead.mobileNumber || '', name: '' };
+      const mobile2 = mobileNumbers[1] || { number: '', name: '' };
+      const mobile3 = mobileNumbers[2] || { number: '', name: '' };
+      
+      // Format main mobile number with contact name if available
+      const mainMobileDisplay = mainMobile.name 
+        ? `${mainMobile.number} (${mainMobile.name})` 
+        : mainMobile.number || '';
+      
+      return [
+        lead.consumerNumber || '',
+        lead.kva || '',
+        lead.connectionDate && lead.connectionDate.trim() !== '' ? lead.connectionDate : '',
+        lead.company || '',
+        lead.clientName || '',
+        mainMobileDisplay, // Main Mobile Number (with contact name if available)
+        lead.status || 'New', // Lead Status
+        lead.notes || '', // Last Discussion
+        lead.companyLocation || (lead.notes && lead.notes.includes('Address:') ? lead.notes.split('Address:')[1]?.trim() || '' : ''), // Address
+        lead.followUpDate || '', // Next Follow-up Date
+        mobile2.number || '', // Mobile Number 2
+        mobile2.name || '', // Contact Name 2
+        mobile3.number || '', // Mobile Number 3
+        mobile3.name || '' // Contact Name 3
+      ];
+    });
     
     // Combine headers and rows
     const csvContent = [
@@ -1142,6 +1169,7 @@ export default function DashboardPage() {
   // Clear all filters
   const clearAllFilters = () => {
     setSearchTerm('');
+    setDiscomFilter('');
     setActiveFilters({
       status: [] // Clear to show no leads - user must select a status
     });
@@ -1253,21 +1281,65 @@ export default function DashboardPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-white-800">Lead Management Dashboard</h1>
         <div className="flex space-x-2">
-          <label className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md transition-colors cursor-pointer">
-            Import Excel/CSV
+          {/* Discom Filter */}
+          <div className="flex items-center gap-2">
+            <select
+              value={discomFilter}
+              onChange={(e) => {
+                const value = e.target.value;
+                setDiscomFilter(value);
+                if (value === '') {
+                  setActiveFilters(prev => {
+                    const { discom, ...rest } = prev;
+                    return rest;
+                  });
+                } else {
+                  setActiveFilters(prev => ({
+                    ...prev,
+                    discom: value
+                  }));
+                }
+              }}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm bg-white text-gray-700"
+              aria-label="Filter by Discom"
+            >
+              <option value="">All Discoms</option>
+              <option value="UGVCL">UGVCL</option>
+              <option value="MGVCL">MGVCL</option>
+              <option value="DGVCL">DGVCL</option>
+              <option value="PGVCL">PGVCL</option>
+            </select>
+          </div>
+          {/* Import Button */}
+          <div className="relative">
             <input
               type="file"
-              accept=".csv,.xlsx,.xls,.xlsm"
+              accept=".xlsx,.xls,.xlsm,.csv"
               onChange={handleFileImport}
               className="hidden"
+              id="file-import-dashboard"
               disabled={isImporting}
             />
-          </label>
-          <button 
-            onClick={handleExportCSV} 
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md transition-colors"
+            <label
+              htmlFor="file-import-dashboard"
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md transition-colors cursor-pointer flex items-center space-x-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+              </svg>
+              <span>Import Leads</span>
+            </label>
+          </div>
+          
+          {/* Export Button */}
+          <button
+            onClick={handleExportCSV}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors flex items-center space-x-2"
           >
-            Export to CSV
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span>Export Leads</span>
           </button>
         </div>
       </div>
@@ -1367,6 +1439,8 @@ export default function DashboardPage() {
               </button>
             )}
           </div>
+
+
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2 flex-wrap">
@@ -1566,20 +1640,30 @@ export default function DashboardPage() {
 
       {/* Status Filter Indicator */}
       {activeFilters.status && activeFilters.status.length === 1 ? (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4 mb-4 shadow-sm">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-blue-800">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <circle cx="10" cy="10" r="3" />
-              </svg>
-              <span className="font-medium">Status: {activeFilters.status[0]}</span>
+            <div className="flex items-center gap-3 text-blue-800">
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                  <circle cx="10" cy="10" r="3" />
+                </svg>
+              </div>
+              <div>
+                <span className="font-semibold text-lg">Filtered by Status: {activeFilters.status[0]}</span>
+                <p className="text-sm text-blue-600">Showing leads with {activeFilters.status[0]} status only</p>
+              </div>
             </div>
-            <button
-              onClick={clearAllFilters}
-              className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-            >
-              Clear Filters
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={clearAllFilters}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium flex items-center gap-2 shadow-sm"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                Back to Main Dashboard
+              </button>
+            </div>
           </div>
         </div>
       ) : (
