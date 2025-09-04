@@ -603,6 +603,10 @@ export default function DashboardPage() {
           lead.status = 'Work Alloted';
         } else if (statusValue === 'hotlead' || statusValue === 'hot lead') {
           lead.status = 'Hotlead';
+        } else if (statusValue === 'mandate sent' || statusValue === 'mandate sent & documentation') {
+          lead.status = 'Mandate Sent';
+        } else if (statusValue === 'documentation') {
+          lead.status = 'Documentation';
         } else if (statusValue.includes('year') || statusValue.includes('exp') || statusValue.includes('service')) {
           lead.status = 'Busy'; // Map old/existing connections to "Busy"
         } else {
@@ -1443,6 +1447,40 @@ export default function DashboardPage() {
                     : 'bg-red-500 text-white'
                 }`}>
                   {statusCounts['Hotlead']}
+                </span>
+              </button>
+              <button
+                onClick={() => handleStatusFilter('Mandate Sent')}
+                className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2 ${
+                  activeFilters.status?.length === 1 && activeFilters.status[0] === 'Mandate Sent'
+                    ? 'bg-teal-800 text-white'
+                    : 'bg-teal-600 hover:bg-teal-700 text-white'
+                }`}
+              >
+                Mandate Sent
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                  activeFilters.status?.length === 1 && activeFilters.status[0] === 'Mandate Sent'
+                    ? 'bg-teal-900 text-teal-100'
+                    : 'bg-teal-500 text-white'
+                }`}>
+                  {statusCounts['Mandate Sent']}
+                </span>
+              </button>
+              <button
+                onClick={() => handleStatusFilter('Documentation')}
+                className={`px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2 ${
+                  activeFilters.status?.length === 1 && activeFilters.status[0] === 'Documentation'
+                    ? 'bg-cyan-800 text-white'
+                    : 'bg-cyan-600 hover:bg-cyan-700 text-white'
+                }`}
+              >
+                Documentation
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                  activeFilters.status?.length === 1 && activeFilters.status[0] === 'Documentation'
+                    ? 'bg-cyan-900 text-cyan-100'
+                    : 'bg-cyan-500 text-white'
+                }`}>
+                  {statusCounts['Documentation']}
                 </span>
               </button>
             </div>
