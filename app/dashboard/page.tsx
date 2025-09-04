@@ -29,6 +29,7 @@ export default function DashboardPage() {
   const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
   const [showEmptyStatusNotification, setShowEmptyStatusNotification] = useState(false);
   const [emptyStatusMessage, setEmptyStatusMessage] = useState('');
+  const [discomFilter, setDiscomFilter] = useState<string>('');
 
   // Create a stable reference for activeFilters to prevent infinite loops
   const activeFiltersKey = useMemo(() => {
@@ -1252,15 +1253,6 @@ export default function DashboardPage() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-white-800">Lead Management Dashboard</h1>
         <div className="flex space-x-2">
-          <button 
-            onClick={() => router.push('/add-lead')} 
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors "
-          >
-                        Add New Lead
-          </button>
-          
-
-
           <label className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md transition-colors cursor-pointer">
             Import Excel/CSV
             <input

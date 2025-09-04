@@ -65,6 +65,7 @@ export interface LeadFilters {
   followUpDateStart?: string;
   followUpDateEnd?: string;
   searchTerm?: string;
+  discom?: string;
 }
 
 export interface SavedView {
@@ -224,6 +225,12 @@ export function LeadProvider({ children }: { children: ReactNode }) {
         return false;
       }
       if (filters.followUpDateEnd && lead.followUpDate > filters.followUpDateEnd) {
+        return false;
+      }
+      
+      // Filter by discom
+      if (filters.discom && filters.discom !== '' && lead.discom !== filters.discom) {
+        console.log(`Lead ${lead.kva} filtered out: discom "${lead.discom}" doesn't match filter "${filters.discom}"`);
         return false;
       }
       
