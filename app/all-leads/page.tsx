@@ -316,6 +316,12 @@ export default function AllLeadsPage() {
     return lead && !lead.isDeleted;
   });
 
+  // Check if any selected leads are not done
+  const hasNotDoneLeads = Array.from(selectedLeads).some(leadId => {
+    const lead = leads.find(l => l.id === leadId);
+    return lead && !lead.isDone;
+  });
+
   const handleBulkDeleteSubmit = () => {
     if (bulkDeletePassword !== DELETE_PASSWORD) {
       setBulkDeleteError('Incorrect password. Please try again.');
@@ -540,14 +546,12 @@ export default function AllLeadsPage() {
                   </button>
                   {selectedLeads.size > 0 && (
                     <>
-                      {hasActiveLeads && (
-                        <button
-                          onClick={handleBulkDeleteClick}
-                          className="px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-                        >
-                          Delete Selected ({selectedLeads.size})
-                        </button>
-                      )}
+                      <button
+                        onClick={handleBulkDeleteClick}
+                        className="px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                      >
+                        Delete Selected ({selectedLeads.size})
+                      </button>
                       {hasDeletedLeads && (
                         <button
                           onClick={handleBulkRestoreClick}
@@ -585,14 +589,12 @@ export default function AllLeadsPage() {
                   </button>
                   {selectedLeads.size > 0 && (
                     <>
-                      {hasActiveLeads && (
-                        <button
-                          onClick={handleBulkDeleteClick}
-                          className="px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-                        >
-                          Delete Selected ({selectedLeads.size})
-                        </button>
-                      )}
+                      <button
+                        onClick={handleBulkDeleteClick}
+                        className="px-3 py-1 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                      >
+                        Delete Selected ({selectedLeads.size})
+                      </button>
                       {hasDeletedLeads && (
                         <button
                           onClick={handleBulkRestoreClick}
