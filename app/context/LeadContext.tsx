@@ -185,14 +185,22 @@ export function LeadProvider({ children }: { children: ReactNode }) {
   };
   
   const getFilteredLeads = (filters: LeadFilters): Lead[] => {
+    console.log('=== FILTERED LEADS DEBUG ===');
+    console.log('Filters:', filters);
+    console.log('Total leads:', leads.length);
+    
     return leads.filter(lead => {
+      console.log(`Checking lead ${lead.kva}: status="${lead.status}", isDeleted=${lead.isDeleted}, isDone=${lead.isDone}, isUpdated=${lead.isUpdated}`);
+      
       // Filter out deleted leads (isDeleted: true) - they should not appear in dashboard
       if (lead.isDeleted) {
+        console.log(`Lead ${lead.kva} filtered out: isDeleted=true`);
         return false;
       }
       
       // Filter out completed leads (isDone: true)
       if (lead.isDone) {
+        console.log(`Lead ${lead.kva} filtered out: isDone=true`);
         return false;
       }
       
@@ -200,12 +208,14 @@ export function LeadProvider({ children }: { children: ReactNode }) {
       // This ensures updated leads are removed from the main dashboard view
       if (!filters.status || filters.status.length === 0) {
         if (lead.isUpdated) {
+          console.log(`Lead ${lead.kva} filtered out: isUpdated=true (main dashboard)`);
           return false; // Hide updated leads from main dashboard
         }
       }
       
       // Filter by status
       if (filters.status && filters.status.length > 0 && !filters.status.includes(lead.status)) {
+        console.log(`Lead ${lead.kva} filtered out: status "${lead.status}" not in filter ${filters.status}`);
         return false;
       }
       

@@ -209,11 +209,19 @@ export default function DashboardPage() {
       'Documentation': 0
     };
 
+    console.log('=== STATUS COUNTS DEBUG ===');
+    console.log('Total leads:', leads.length);
+    
     leads.forEach(lead => {
+      console.log(`Lead ${lead.kva}: status="${lead.status}", isDone=${lead.isDone}, isDeleted=${lead.isDeleted}`);
       if (!lead.isDone && !lead.isDeleted && lead.status in counts) {
         counts[lead.status as keyof typeof counts]++;
+        console.log(`Incremented count for status: ${lead.status}`);
       }
     });
+
+    console.log('Final status counts:', counts);
+    console.log('=== END STATUS COUNTS DEBUG ===');
 
     return counts;
   }, [leads]);
@@ -286,14 +294,8 @@ export default function DashboardPage() {
       console.log('=== IMPORT COMPLETE ===');
       console.log('Imported count returned:', importedCount);
       
-      // Add notification instead of showing message
-      // const newNotification = {
-      //   id: Date.now(),
-      //   message: `Successfully imported ${importedCount} leads from ${file.name}`,
-      //   time: 'Just now',
-      //   type: 'import'
-      // };
-      // setNotifications(prev => [newNotification, ...prev]);
+      // Show success notification
+      showToastNotification(`Successfully imported ${importedCount} leads from ${file.name}`, 'success');
       
       // Clear the file input
       event.target.value = '';
@@ -301,14 +303,8 @@ export default function DashboardPage() {
       console.error('=== IMPORT ERROR ===');
       console.error('Import error:', error);
       
-      // Add error notification instead of showing message
-      // const errorNotification = {
-      //   id: Date.now(),
-      //   message: `Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      //   time: 'Just now',
-      //   type: 'error'
-      // };
-      // setNotifications(prev => [errorNotification, ...prev]);
+      // Show error notification
+      showToastNotification(`Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
     } finally {
       setIsImporting(false);
       console.log('=== IMPORT PROCESS ENDED ===');
@@ -587,31 +583,52 @@ export default function DashboardPage() {
       case 'status':
       case 'current status':
       case 'lead status':
+      case 'leadstatus':
+      case 'lead_status':
+      case 'lead-status':
         // Map your status values to valid enum values
         const statusValue = String(value).toLowerCase();
+        console.log('=== STATUS MAPPING DEBUG ===');
+        console.log('Original status value:', value);
+        console.log('Lowercase status value:', statusValue);
+        console.log('Header being processed:', header);
+        
         if (statusValue === 'new') {
           lead.status = 'New';
+          console.log('Mapped to: New');
         } else if (statusValue === 'cnr') {
           lead.status = 'CNR';
+          console.log('Mapped to: CNR');
         } else if (statusValue === 'busy') {
           lead.status = 'Busy';
+          console.log('Mapped to: Busy');
         } else if (statusValue === 'follow-up' || statusValue === 'follow up') {
           lead.status = 'Follow-up';
+          console.log('Mapped to: Follow-up');
         } else if (statusValue === 'deal close' || statusValue === 'dealclose') {
           lead.status = 'Deal Close';
+          console.log('Mapped to: Deal Close');
         } else if (statusValue === 'work alloted' || statusValue === 'workalloted') {
           lead.status = 'Work Alloted';
+          console.log('Mapped to: Work Alloted');
         } else if (statusValue === 'hotlead' || statusValue === 'hot lead') {
           lead.status = 'Hotlead';
-        } else if (statusValue === 'mandate sent' || statusValue === 'mandate sent & documentation') {
+          console.log('Mapped to: Hotlead');
+        } else if (statusValue === 'mandate sent' || statusValue === 'mandate sent & documentation' || statusValue === 'mandate sent and documentation' || statusValue === 'mandate sent & doc' || statusValue === 'mandate sent and doc') {
           lead.status = 'Mandate Sent';
+          console.log('Mapped to: Mandate Sent');
         } else if (statusValue === 'documentation') {
           lead.status = 'Documentation';
+          console.log('Mapped to: Documentation');
         } else if (statusValue.includes('year') || statusValue.includes('exp') || statusValue.includes('service')) {
           lead.status = 'Busy'; // Map old/existing connections to "Busy"
+          console.log('Mapped to: Busy (legacy)');
         } else {
           lead.status = 'New';
+          console.log('Mapped to: New (default)');
         }
+        console.log('Final lead status:', lead.status);
+        console.log('=== END STATUS MAPPING DEBUG ===');
         break;
       case 'marking call date 1 april 25':
       case 'marking call':
