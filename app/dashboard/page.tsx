@@ -511,6 +511,19 @@ export default function DashboardPage() {
     console.log('Is empty: ' + (!value || value === '' || value === null || value === undefined));
     console.log('Processing header: ' + headerLower);
     
+    // Check if this is a status-related header
+    const isStatusHeader = headerLower.includes('status') || 
+                          headerLower === 'status' || 
+                          headerLower === 'lead status' || 
+                          headerLower === 'current status' ||
+                          headerLower === 'leadstatus' ||
+                          headerLower === 'lead_status' ||
+                          headerLower === 'lead-status';
+    
+    if (isStatusHeader) {
+      console.log('🎯 STATUS HEADER DETECTED:', headerLower);
+    }
+    
     switch (headerLower) {
       // Your Excel column headers - exact matches
       case 'con.no':
@@ -588,6 +601,16 @@ export default function DashboardPage() {
       case 'leadstatus':
       case 'lead_status':
       case 'lead-status':
+      case 'lead status':
+      case 'leadstatus':
+      case 'lead_status':
+      case 'lead-status':
+      case 'status':
+      case 'current status':
+      case 'lead status':
+      case 'leadstatus':
+      case 'lead_status':
+      case 'lead-status':
         console.log('*** STATUS HEADER MATCHED ***');
         // Map your status values to valid enum values
         const statusValue = String(value).toLowerCase().trim();
@@ -595,43 +618,89 @@ export default function DashboardPage() {
         console.log('Original status value:', value);
         console.log('Lowercase status value:', statusValue);
         console.log('Header being processed:', header);
-        console.log('Header lowercase:', header.toLowerCase());
-        console.log('Value type:', typeof value);
-        console.log('Value length:', value ? value.toString().length : 'undefined');
         
+        // Comprehensive status mapping with multiple variations
         if (statusValue === 'new') {
           lead.status = 'New';
-          console.log('Mapped to: New');
         } else if (statusValue === 'cnr') {
           lead.status = 'CNR';
-          console.log('Mapped to: CNR');
         } else if (statusValue === 'busy') {
           lead.status = 'Busy';
-          console.log('Mapped to: Busy');
-        } else if (statusValue === 'follow-up' || statusValue === 'follow up') {
+        } else if (statusValue === 'follow-up' || statusValue === 'follow up' || statusValue === 'followup') {
           lead.status = 'Follow-up';
-          console.log('Mapped to: Follow-up');
-        } else if (statusValue === 'deal close' || statusValue === 'dealclose') {
+        } else if (statusValue === 'deal close' || statusValue === 'dealclose' || statusValue === 'deal_close') {
           lead.status = 'Deal Close';
-          console.log('Mapped to: Deal Close');
-        } else if (statusValue === 'work alloted' || statusValue === 'workalloted') {
+        } else if (statusValue === 'work alloted' || statusValue === 'workalloted' || statusValue === 'work_alloted') {
           lead.status = 'Work Alloted';
-          console.log('Mapped to: Work Alloted');
-        } else if (statusValue === 'hotlead' || statusValue === 'hot lead') {
+        } else if (statusValue === 'hotlead' || statusValue === 'hot lead' || statusValue === 'hot_lead') {
           lead.status = 'Hotlead';
-          console.log('Mapped to: Hotlead');
-        } else if (statusValue === 'mandate sent' || statusValue === 'mandate sent & documentation' || statusValue === 'mandate sent and documentation' || statusValue === 'mandate sent & doc' || statusValue === 'mandate sent and doc' || statusValue === 'mandatesent' || statusValue === 'mandate_sent' || statusValue === 'mandate-sent') {
+        } else if (
+          statusValue === 'mandate sent' || 
+          statusValue === 'mandate sent & documentation' || 
+          statusValue === 'mandate sent and documentation' || 
+          statusValue === 'mandate sent & doc' || 
+          statusValue === 'mandate sent and doc' || 
+          statusValue === 'mandatesent' || 
+          statusValue === 'mandate_sent' || 
+          statusValue === 'mandate-sent' ||
+          statusValue === 'mandate sent ' ||
+          statusValue === ' mandate sent' ||
+          statusValue === 'mandate sent.' ||
+          statusValue === 'mandate sent,' ||
+          statusValue.includes('mandate sent')
+        ) {
           lead.status = 'Mandate Sent';
-          console.log('Mapped to: Mandate Sent');
-        } else if (statusValue === 'documentation') {
+          console.log('✅ Mapped to: Mandate Sent');
+        } else if (
+          statusValue === 'documentation' || 
+          statusValue === 'documentation ' ||
+          statusValue === ' documentation' ||
+          statusValue.includes('documentation')
+        ) {
           lead.status = 'Documentation';
-          console.log('Mapped to: Documentation');
         } else if (statusValue.includes('year') || statusValue.includes('exp') || statusValue.includes('service')) {
-          lead.status = 'Busy'; // Map old/existing connections to "Busy"
-          console.log('Mapped to: Busy (legacy)');
+          lead.status = 'Busy';
         } else {
-          lead.status = 'New';
-          console.log('Mapped to: New (default) - UNMATCHED STATUS VALUE:', statusValue);
+          // If we detected a status header but couldn't map the value, try a more flexible approach
+          if (isStatusHeader) {
+            console.log('🔍 Attempting flexible status mapping for:', statusValue);
+            
+            // Try to match partial strings
+            if (statusValue.includes('mandate') || statusValue.includes('sent')) {
+              lead.status = 'Mandate Sent';
+              console.log('✅ Flexible mapping: Mandate Sent');
+            } else if (statusValue.includes('document')) {
+              lead.status = 'Documentation';
+              console.log('✅ Flexible mapping: Documentation');
+            } else if (statusValue.includes('new')) {
+              lead.status = 'New';
+              console.log('✅ Flexible mapping: New');
+            } else if (statusValue.includes('cnr')) {
+              lead.status = 'CNR';
+              console.log('✅ Flexible mapping: CNR');
+            } else if (statusValue.includes('busy')) {
+              lead.status = 'Busy';
+              console.log('✅ Flexible mapping: Busy');
+            } else if (statusValue.includes('follow')) {
+              lead.status = 'Follow-up';
+              console.log('✅ Flexible mapping: Follow-up');
+            } else if (statusValue.includes('deal') || statusValue.includes('close')) {
+              lead.status = 'Deal Close';
+              console.log('✅ Flexible mapping: Deal Close');
+            } else if (statusValue.includes('work') || statusValue.includes('allot')) {
+              lead.status = 'Work Alloted';
+              console.log('✅ Flexible mapping: Work Alloted');
+            } else if (statusValue.includes('hot') || statusValue.includes('lead')) {
+              lead.status = 'Hotlead';
+              console.log('✅ Flexible mapping: Hotlead');
+            } else {
+              lead.status = 'New';
+              console.log('❌ UNMATCHED STATUS VALUE:', statusValue);
+            }
+          } else {
+            lead.status = 'New';
+            console.log('❌ UNMATCHED STATUS VALUE:', statusValue);
+          }
         }
         console.log('Final lead status:', lead.status);
         console.log('=== END STATUS MAPPING DEBUG ===');
@@ -1297,6 +1366,70 @@ export default function DashboardPage() {
             className="bg-cyan-600 hover:bg-cyan-700 text-white px-4 py-2 rounded-md transition-colors"
           >
             Test Mandate Sent (lowercase)
+          </button>
+          
+          <button 
+            onClick={() => {
+              // Test the status mapping function directly
+              console.log('🧪 TESTING STATUS MAPPING FUNCTION');
+              
+              const testCases = [
+                'Mandate sent',
+                'mandate sent',
+                'Mandate Sent',
+                'MANDATE SENT',
+                'mandate sent ',
+                ' mandate sent',
+                'Mandate sent.',
+                'Mandate sent,',
+                'Mandate sent & Documentation',
+                'Mandate sent and Documentation',
+                'mandatesent',
+                'mandate_sent',
+                'mandate-sent'
+              ];
+              
+              testCases.forEach((testValue, index) => {
+                console.log(`\n--- Test Case ${index + 1}: "${testValue}" ---`);
+                
+                // Simulate the mapping logic
+                const statusValue = String(testValue).toLowerCase().trim();
+                console.log('Lowercase value:', statusValue);
+                
+                let mappedStatus = 'New';
+                
+                if (
+                  statusValue === 'mandate sent' || 
+                  statusValue === 'mandate sent & documentation' || 
+                  statusValue === 'mandate sent and documentation' || 
+                  statusValue === 'mandate sent & doc' || 
+                  statusValue === 'mandate sent and doc' || 
+                  statusValue === 'mandatesent' || 
+                  statusValue === 'mandate_sent' || 
+                  statusValue === 'mandate-sent' ||
+                  statusValue === 'mandate sent ' ||
+                  statusValue === ' mandate sent' ||
+                  statusValue === 'mandate sent.' ||
+                  statusValue === 'mandate sent,' ||
+                  statusValue.includes('mandate sent')
+                ) {
+                  mappedStatus = 'Mandate Sent';
+                  console.log('✅ EXACT MATCH: Mandate Sent');
+                } else if (statusValue.includes('mandate') || statusValue.includes('sent')) {
+                  mappedStatus = 'Mandate Sent';
+                  console.log('✅ FLEXIBLE MATCH: Mandate Sent');
+                } else {
+                  console.log('❌ NO MATCH: Defaulting to New');
+                }
+                
+                console.log(`Final result: "${testValue}" -> "${mappedStatus}"`);
+              });
+              
+              showToastNotification('Status mapping test completed - check console', 'info');
+            }}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md transition-colors"
+          >
+            Test Status Mapping
           </button>
 
           <label className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md transition-colors cursor-pointer">
