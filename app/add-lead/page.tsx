@@ -257,19 +257,27 @@ export default function AddLeadPage() {
 
   // Handle connection date changes with auto-formatting
   const handleConnectionDateChange = (e: ChangeEvent<HTMLInputElement>): void => {
-    let value = e.target.value.replace(/[^0-9]/g, ''); // Remove non-numeric characters
+    let value = e.target.value;
     
-    // Auto-format with dashes
-    if (value.length >= 2) {
-      value = value.slice(0, 2) + '-' + value.slice(2);
-    }
-    if (value.length >= 5) {
-      value = value.slice(0, 5) + '-' + value.slice(5, 9);
+    // Allow user to delete dashes, but auto-add them back
+    // Remove all non-numeric characters first
+    const numericValue = value.replace(/[^0-9]/g, '');
+    
+    // Auto-format with dashes based on numeric length
+    let formattedValue = '';
+    if (numericValue.length >= 1) {
+      formattedValue = numericValue.slice(0, 2);
+      if (numericValue.length >= 3) {
+        formattedValue += '-' + numericValue.slice(2, 4);
+        if (numericValue.length >= 5) {
+          formattedValue += '-' + numericValue.slice(4, 8);
+        }
+      }
     }
     
     setFormData(prev => ({
       ...prev,
-      connectionDate: value
+      connectionDate: formattedValue
     }));
 
     // Clear error for this field
