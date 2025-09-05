@@ -67,7 +67,17 @@
 
 /* Form Input Utility Class */
 .input {
-  @apply w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500;
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
 }
 
 /* Fix placeholder color to be black */
@@ -90,7 +100,8 @@
   color: #000000;
 }
 
-@theme inline {
+/* Theme Variables */
+:root {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
