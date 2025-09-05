@@ -468,10 +468,14 @@ export default function UpcomingPage() {
                           const phoneNumber = selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0 
                             ? selectedLead.mobileNumbers.find(m => m.isMain)?.number || selectedLead.mobileNumbers[0]?.number || 'N/A'
                             : selectedLead.mobileNumber || 'N/A';
-                          copyToClipboard(phoneNumber, 'mainPhone');
+                          const contactName = selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0 
+                            ? selectedLead.mobileNumbers.find(m => m.isMain)?.name || selectedLead.clientName || 'N/A'
+                            : selectedLead.clientName || 'N/A';
+                          const phoneWithName = `${phoneNumber} - ${contactName}`;
+                          copyToClipboard(phoneWithName, 'mainPhone');
                         }}
                         className="text-gray-400 hover:text-gray-600 transition-colors"
-                        title="Copy main phone number"
+                        title="Copy main phone number and contact name"
                       >
                         {copiedField === 'mainPhone' ? (
                           <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -485,41 +489,15 @@ export default function UpcomingPage() {
                       </button>
                     </div>
                     <p className="text-sm font-medium text-gray-900">
-                      {selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0 
-                        ? selectedLead.mobileNumbers.find(m => m.isMain)?.number || selectedLead.mobileNumbers[0]?.number || 'N/A'
-                        : selectedLead.mobileNumber || 'N/A'
-                      }
-                    </p>
-                  </div>
-                  <div className="bg-gray-50 p-3 rounded-md">
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="block text-xs font-medium text-gray-600">Contact Name</label>
-                      <button
-                        onClick={() => {
-                          const contactName = selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0 
-                            ? selectedLead.mobileNumbers.find(m => m.isMain)?.name || selectedLead.clientName || 'N/A'
-                            : selectedLead.clientName || 'N/A';
-                          copyToClipboard(contactName, 'contactName');
-                        }}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
-                        title="Copy contact name"
-                      >
-                        {copiedField === 'contactName' ? (
-                          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        ) : (
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0 
-                        ? selectedLead.mobileNumbers.find(m => m.isMain)?.name || selectedLead.clientName || 'N/A'
-                        : selectedLead.clientName || 'N/A'
-                      }
+                      {(() => {
+                        const phoneNumber = selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0 
+                          ? selectedLead.mobileNumbers.find(m => m.isMain)?.number || selectedLead.mobileNumbers[0]?.number || 'N/A'
+                          : selectedLead.mobileNumber || 'N/A';
+                        const contactName = selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0 
+                          ? selectedLead.mobileNumbers.find(m => m.isMain)?.name || selectedLead.clientName || 'N/A'
+                          : selectedLead.clientName || 'N/A';
+                        return `${phoneNumber} - ${contactName}`;
+                      })()}
                     </p>
                   </div>
                   <div className="bg-gray-50 p-3 rounded-md">
@@ -693,12 +671,15 @@ KVA: ${selectedLead.kva}
 Discom: ${selectedLead.discom || 'N/A'}
 GIDC: ${selectedLead.gidc || 'N/A'}
 GST Number: ${selectedLead.gstNumber || 'N/A'}
-Phone: ${selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0 
-  ? selectedLead.mobileNumbers.find(m => m.isMain)?.number || selectedLead.mobileNumbers[0]?.number || 'N/A'
-  : selectedLead.mobileNumber || 'N/A'}
-Contact Name: ${selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0 
-  ? selectedLead.mobileNumbers.find(m => m.isMain)?.name || selectedLead.clientName || 'N/A'
-  : selectedLead.clientName || 'N/A'}
+Phone: ${(() => {
+  const phoneNumber = selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0 
+    ? selectedLead.mobileNumbers.find(m => m.isMain)?.number || selectedLead.mobileNumbers[0]?.number || 'N/A'
+    : selectedLead.mobileNumber || 'N/A';
+  const contactName = selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0 
+    ? selectedLead.mobileNumbers.find(m => m.isMain)?.name || selectedLead.clientName || 'N/A'
+    : selectedLead.clientName || 'N/A';
+  return `${phoneNumber} - ${contactName}`;
+})()}
 Status: ${selectedLead.status}
 Unit Type: ${selectedLead.unitType}
 Connection Date: ${formatDateToDDMMYYYY(selectedLead.connectionDate)}
