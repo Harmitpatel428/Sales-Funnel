@@ -508,15 +508,6 @@ export default function DueTodayPage() {
                     </div>
                     <p className="text-sm font-medium text-gray-900">{selectedLead.discom || 'N/A'}</p>
                   </div>
-                  <div className="bg-gray-50 p-3 rounded-md">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      selectedLead.isDeleted ? 'bg-red-100 text-red-800' :
-                      selectedLead.isDone ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {selectedLead.isDeleted ? 'Deleted' : selectedLead.isDone ? 'Completed' : 'Active'}
-                    </span>
-                  </div>
                   
                   {/* Dates */}
                   <div className="bg-gray-50 p-3 rounded-md">
