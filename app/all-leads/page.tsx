@@ -593,11 +593,21 @@ export default function AllLeadsPage() {
       setShowToast(true);
       setToastMessage(`Successfully exported ${leadsToExport.length} leads to Excel format`);
       setToastType('success');
+      
+      // Auto-hide toast after 5 seconds
+      setTimeout(() => {
+        setShowToast(false);
+      }, 5000);
     } catch (error) {
       console.error('Export error:', error);
       setShowToast(true);
       setToastMessage('Failed to export leads. Please try again.');
       setToastType('error');
+      
+      // Auto-hide toast after 5 seconds
+      setTimeout(() => {
+        setShowToast(false);
+      }, 5000);
     }
   };
 
@@ -1463,6 +1473,61 @@ ${selectedLead.finalConclusion ? `Conclusion: ${selectedLead.finalConclusion}` :
                 >
                   {hasDeletedLeads ? `Process ${selectedLeads.size} Leads` : `Delete ${selectedLeads.size} Leads`}
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {showToast && (
+        <div className="fixed top-4 right-4 z-50">
+          <div className={`max-w-sm w-full bg-white shadow-lg rounded-lg pointer-events-auto ring-1 ring-black ring-opacity-5 overflow-hidden ${
+            toastType === 'success' ? 'border-l-4 border-green-400' :
+            toastType === 'error' ? 'border-l-4 border-red-400' :
+            'border-l-4 border-blue-400'
+          }`}>
+            <div className="p-4">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  {toastType === 'success' ? (
+                    <svg className="h-6 w-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : toastType === 'error' ? (
+                    <svg className="h-6 w-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                  ) : (
+                    <svg className="h-6 w-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                </div>
+                <div className="ml-3 w-0 flex-1 pt-0.5">
+                  <p className={`text-sm font-medium ${
+                    toastType === 'success' ? 'text-green-800' :
+                    toastType === 'error' ? 'text-red-800' :
+                    'text-blue-800'
+                  }`}>
+                    {toastMessage}
+                  </p>
+                </div>
+                <div className="ml-4 flex-shrink-0 flex">
+                  <button
+                    onClick={() => setShowToast(false)}
+                    className={`bg-white rounded-md inline-flex ${
+                      toastType === 'success' ? 'text-green-400 hover:text-green-500' :
+                      toastType === 'error' ? 'text-red-400 hover:text-red-500' :
+                      'text-blue-400 hover:text-blue-500'
+                    } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
+                  >
+                    <span className="sr-only">Close</span>
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
