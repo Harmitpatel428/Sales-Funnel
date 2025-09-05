@@ -343,7 +343,7 @@ export default function AllLeadsPage() {
   };
 
   // Handle lead click
-  const handleLeadClick = (lead: any) => {
+  const handleLeadClick = (lead: Lead) => {
     openModal(lead);
   };
 
@@ -376,7 +376,7 @@ export default function AllLeadsPage() {
       }
 
       const headers = jsonData[0] as string[];
-      const rows = jsonData.slice(1) as any[][];
+      const rows = jsonData.slice(1) as string[][];
 
       const newLeads: Lead[] = [];
 
@@ -540,7 +540,7 @@ export default function AllLeadsPage() {
               lead.status = 'New';
             }
           } else if (headerLower.includes('unit') || headerLower.includes('type')) {
-            lead.unitType = valueStr;
+            lead.unitType = valueStr as 'New' | 'Existing' | 'Other';
           } else if (headerLower.includes('follow') && headerLower.includes('date')) {
             lead.followUpDate = valueStr;
           } else if (headerLower.includes('discom') || headerLower.includes('distribution') || headerLower.includes('utility')) {
@@ -668,7 +668,7 @@ export default function AllLeadsPage() {
   };
 
   // Action buttons for the table
-  const renderActionButtons = (lead: any) => (
+  const renderActionButtons = (lead: Lead) => (
     <div className="flex space-x-2">
       {!lead.isDeleted && (
         <>
@@ -1330,7 +1330,7 @@ ${selectedLead.finalConclusion ? `Conclusion: ${selectedLead.finalConclusion}` :
                           <>
                             <p>You are about to delete this lead:</p>
                             <p className="font-semibold mt-1">{leadToDelete?.clientName} - {leadToDelete?.company}</p>
-                            <p className="mt-1">The lead will be marked as deleted and moved to the "All Leads" page. This action cannot be undone.</p>
+                            <p className="mt-1">The lead will be marked as deleted and moved to the &quot;All Leads&quot; page. This action cannot be undone.</p>
                           </>
                         )}
                       </div>
@@ -1507,14 +1507,14 @@ ${selectedLead.finalConclusion ? `Conclusion: ${selectedLead.finalConclusion}` :
                         {hasDeletedLeads ? (
                           <>
                             <p>You are about to delete {selectedLeads.size} leads:</p>
-                            <p className="mt-1">• Some leads will be marked as deleted and moved to "All Leads"</p>
+                            <p className="mt-1">• Some leads will be marked as deleted and moved to &quot;All Leads&quot;</p>
                             <p className="mt-1">• Some leads will be permanently removed from the system</p>
                             <p className="mt-1">This action cannot be undone.</p>
                           </>
                         ) : (
                           <>
                             <p>You are about to delete {selectedLeads.size} leads.</p>
-                            <p className="mt-1">The leads will be marked as deleted and moved to the "All Leads" page.</p>
+                            <p className="mt-1">The leads will be marked as deleted and moved to the &quot;All Leads&quot; page.</p>
                             <p className="mt-1">This action cannot be undone.</p>
                           </>
                         )}
