@@ -147,7 +147,7 @@ function LeadTable({
 
   // Calculate column span for empty state
   const getColumnSpan = () => {
-    let span = 9; // Base columns: KVA, Connection Date, Consumer Number, Company, Client Name, Mobile Number, Status, Last Activity, Next Follow-up
+    let span = 10; // Base columns: KVA, Connection Date, Consumer Number, Company, Client Name, Discom, Mobile Number, Status, Last Activity, Next Follow-up
     if (onLeadSelection) span += 1; // Add checkbox column
     if (showActions) span += 1; // Add actions column
     return span;
@@ -211,6 +211,13 @@ function LeadTable({
               onClick={() => handleSort('clientName')}
             >
               Client Name{renderSortIndicator('clientName')}
+            </th>
+            <th 
+              scope="col" 
+              className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+              onClick={() => handleSort('discom')}
+            >
+              Discom{renderSortIndicator('discom')}
             </th>
             <th 
               scope="col" 
@@ -283,6 +290,9 @@ function LeadTable({
                 </td>
                 <td className="px-2 py-3 whitespace-nowrap">
                   <div className="text-sm text-gray-500 max-w-40 truncate" title={lead.clientName}>{lead.clientName}</div>
+                </td>
+                <td className="px-2 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-500">{lead.discom || 'N/A'}</div>
                 </td>
                 <td className="px-2 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-500">

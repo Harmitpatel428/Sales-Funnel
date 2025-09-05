@@ -770,6 +770,12 @@ export default function DashboardPage() {
           lead.documentStatus = 'Pending Documents';
         }
         break;
+      case 'discom':
+      case 'discom name':
+      case 'distribution company':
+      case 'utility company':
+        lead.discom = String(value);
+        break;
     }
   };
 
@@ -968,6 +974,7 @@ export default function DashboardPage() {
       'Connection Date', 
       'Company Name', 
       'Client Name', 
+      'Discom',
       'Main Mobile Number', 
       'Lead Status', 
       'Last Discussion', 
@@ -998,6 +1005,7 @@ export default function DashboardPage() {
         lead.connectionDate && lead.connectionDate.trim() !== '' ? lead.connectionDate : '',
         lead.company || '',
         lead.clientName || '',
+        lead.discom || '', // Discom
         mainMobileDisplay, // Main Mobile Number (with contact name if available)
         lead.status || 'New', // Lead Status
         lead.notes || '', // Last Discussion
@@ -2002,6 +2010,7 @@ export default function DashboardPage() {
 Company: ${selectedLead.company}
 Consumer Number: ${selectedLead.consumerNumber || 'N/A'}
 KVA: ${selectedLead.kva}
+Discom: ${selectedLead.discom || 'N/A'}
 Phone: ${selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0 
   ? selectedLead.mobileNumbers.find(m => m.isMain)?.number || selectedLead.mobileNumbers[0]?.number || 'N/A'
   : selectedLead.mobileNumber || 'N/A'}

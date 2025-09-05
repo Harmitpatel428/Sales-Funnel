@@ -82,6 +82,7 @@ export default function AllLeadsPage() {
           ...allMobileNames,
           lead.consumerNumber,
           lead.kva,
+          lead.discom,
           lead.companyLocation,
           lead.notes,
           lead.finalConclusion,
@@ -419,6 +420,8 @@ export default function AllLeadsPage() {
             lead.unitType = valueStr;
           } else if (headerLower.includes('follow') && headerLower.includes('date')) {
             lead.followUpDate = valueStr;
+          } else if (headerLower.includes('discom') || headerLower.includes('distribution') || headerLower.includes('utility')) {
+            lead.discom = valueStr;
           }
         });
 
@@ -457,6 +460,7 @@ export default function AllLeadsPage() {
       'Connection Date', 
       'Company Name', 
       'Client Name', 
+      'Discom',
       'Main Mobile Number', 
       'Lead Status', 
       'Last Discussion', 
@@ -487,6 +491,7 @@ export default function AllLeadsPage() {
         lead.connectionDate && lead.connectionDate.trim() !== '' ? lead.connectionDate : '',
         lead.company || '',
         lead.clientName || '',
+        lead.discom || '', // Discom
         mainMobileDisplay, // Main Mobile Number (with contact name if available)
         lead.status || 'New', // Lead Status
         lead.notes || '', // Last Discussion
@@ -904,6 +909,27 @@ export default function AllLeadsPage() {
                     <p className="text-sm font-medium text-gray-900">{selectedLead.unitType}</p>
                   </div>
                   <div className="bg-gray-50 p-3 rounded-md">
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-xs font-medium text-gray-600">Discom</label>
+                      <button
+                        onClick={() => copyToClipboard(selectedLead.discom || 'N/A', 'discom')}
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        title="Copy discom"
+                      >
+                        {copiedField === 'discom' ? (
+                          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-sm font-medium text-gray-900">{selectedLead.discom || 'N/A'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-md">
                     <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                       selectedLead.isDeleted ? 'bg-red-100 text-red-800' :
@@ -1028,6 +1054,7 @@ export default function AllLeadsPage() {
 Company: ${selectedLead.company}
 Consumer Number: ${selectedLead.consumerNumber || 'N/A'}
 KVA: ${selectedLead.kva}
+Discom: ${selectedLead.discom || 'N/A'}
 Phone: ${selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0 
   ? selectedLead.mobileNumbers.find(m => m.isMain)?.number || selectedLead.mobileNumbers[0]?.number || 'N/A'
   : selectedLead.mobileNumber || 'N/A'}
