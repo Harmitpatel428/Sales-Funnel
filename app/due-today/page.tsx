@@ -44,6 +44,30 @@ export default function DueTodayPage() {
     }
   };
 
+  // Helper function to format date to DD-MM-YYYY
+  const formatDateToDDMMYYYY = (dateString: string): string => {
+    if (!dateString) return '';
+    
+    // If already in DD-MM-YYYY format, return as is
+    if (dateString.match(/^\d{2}-\d{2}-\d{4}$/)) {
+      return dateString;
+    }
+    
+    // If it's a Date object or ISO string, convert to DD-MM-YYYY
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return dateString; // Return original if invalid
+      
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      
+      return `${day}-${month}-${year}`;
+    } catch {
+      return dateString; // Return original if conversion fails
+    }
+  };
+
   // Filter leads based on follow-up dates
   const todayLeads = useMemo(() => {
     const today = new Date();
@@ -497,52 +521,19 @@ export default function DueTodayPage() {
                   {/* Dates */}
                   <div className="bg-gray-50 p-3 rounded-md">
                     <label className="block text-xs font-medium text-gray-600 mb-1">Connection Date</label>
-                    <p className="text-sm font-medium text-gray-900">{selectedLead.connectionDate}</p>
+                    <p className="text-sm font-medium text-gray-900">{formatDateToDDMMYYYY(selectedLead.connectionDate)}</p>
                   </div>
                   <div className="bg-gray-50 p-3 rounded-md">
                     <label className="block text-xs font-medium text-gray-600 mb-1">Follow-up Date</label>
                     <p className="text-sm font-medium text-gray-900">
-                      {selectedLead.followUpDate ? (() => {
-                        // Convert yyyy-mm-dd to dd-mm-yyyy
-                        const dateParts = selectedLead.followUpDate.split('-');
-                        if (dateParts.length === 3) {
-                          return `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`;
-                        }
-                        return selectedLead.followUpDate;
-                      })() : 'N/A'}
+                      {selectedLead.followUpDate ? formatDateToDDMMYYYY(selectedLead.followUpDate) : 'N/A'}
                     </p>
                   </div>
                   <div className="bg-gray-50 p-3 rounded-md">
                     <label className="block text-xs font-medium text-gray-600 mb-1">Last Activity</label>
-                    <p className="text-sm font-medium text-gray-900">{selectedLead.lastActivityDate}</p>
+                    <p className="text-sm font-medium text-gray-900">{formatDateToDDMMYYYY(selectedLead.lastActivityDate)}</p>
                   </div>
                   
-                  {/* Mandate & Document Status */}
-                  {selectedLead.mandateStatus && (
-                    <div className="bg-gray-50 p-3 rounded-md">
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Mandate Status</label>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        selectedLead.mandateStatus === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
-                        selectedLead.mandateStatus === 'In Progress' ? 'bg-blue-100 text-blue-800' :
-                        'bg-green-100 text-green-800'
-                      }`}>
-                        {selectedLead.mandateStatus}
-                      </span>
-                    </div>
-                  )}
-                  {selectedLead.documentStatus && (
-                    <div className="bg-gray-50 p-3 rounded-md">
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Document Status</label>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        selectedLead.documentStatus === 'Pending Documents' ? 'bg-red-100 text-red-800' :
-                        selectedLead.documentStatus === 'Documents Submitted' ? 'bg-yellow-100 text-yellow-800' :
-                        selectedLead.documentStatus === 'Documents Reviewed' ? 'bg-blue-100 text-blue-800' :
-                        'bg-green-100 text-green-800'
-                      }`}>
-                        {selectedLead.documentStatus}
-                      </span>
-                    </div>
-                  )}
                 </div>
 
                 {/* Additional Numbers */}
@@ -615,9 +606,9 @@ Phone: ${selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0
   : selectedLead.mobileNumber || 'N/A'}
 Status: ${selectedLead.status}
 Unit Type: ${selectedLead.unitType}
-Connection Date: ${selectedLead.connectionDate}
-Follow-up Date: ${selectedLead.followUpDate || 'N/A'}
-Last Activity: ${selectedLead.lastActivityDate}
+Connection Date: ${formatDateToDDMMYYYY(selectedLead.connectionDate)}
+Follow-up Date: ${selectedLead.followUpDate ? formatDateToDDMMYYYY(selectedLead.followUpDate) : 'N/A'}
+Last Activity: ${formatDateToDDMMYYYY(selectedLead.lastActivityDate)}
 ${selectedLead.companyLocation ? `Location: ${selectedLead.companyLocation}` : ''}
 ${selectedLead.notes ? `Last Discussion: ${selectedLead.notes}` : ''}
 ${selectedLead.finalConclusion ? `Conclusion: ${selectedLead.finalConclusion}` : ''}`;
