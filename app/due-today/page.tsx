@@ -121,6 +121,34 @@ export default function DueTodayPage() {
     }
   };
 
+  // WhatsApp redirect function
+  const handleWhatsAppRedirect = (lead: Lead) => {
+    // Get the main phone number
+    const mainPhoneNumber = lead.mobileNumbers && lead.mobileNumbers.length > 0 
+      ? lead.mobileNumbers.find(m => m.isMain)?.number || lead.mobileNumbers[0]?.number || lead.mobileNumber
+      : lead.mobileNumber;
+
+    if (!mainPhoneNumber || mainPhoneNumber.trim() === '') {
+      alert('No phone number available for this lead.');
+      return;
+    }
+
+    // Clean the phone number (remove any non-digit characters)
+    const cleanNumber = mainPhoneNumber.replace(/[^0-9]/g, '');
+    
+    // Check if number is valid (should be 10 digits for Indian numbers)
+    if (cleanNumber.length !== 10) {
+      alert(`Invalid phone number: ${mainPhoneNumber}. Please check the number format.`);
+      return;
+    }
+
+    // Create WhatsApp URL
+    const whatsappUrl = `https://wa.me/91${cleanNumber}`;
+    
+    // Open WhatsApp in new tab
+    window.open(whatsappUrl, '_blank');
+  };
+
   // Handle lead click
   const handleLeadClick = (lead: any) => {
     openModal(lead);
