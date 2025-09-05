@@ -209,10 +209,10 @@ export default function AddLeadPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle mobile number changes - only allow numeric input
+  // Handle mobile number changes - only allow numeric input with max 10 digits
   const handleMobileNumberChange = (index: number, value: string) => {
-    // Only allow numeric characters (0-9) and common phone number separators
-    const numericValue = value.replace(/[^0-9]/g, '');
+    // Only allow numeric characters (0-9) and limit to 10 digits
+    const numericValue = value.replace(/[^0-9]/g, '').slice(0, 10);
     
     setFormData(prev => ({
       ...prev,
@@ -728,7 +728,7 @@ export default function AddLeadPage() {
                           className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200 text-black ${
                             errors[`mobileNumber_${index}` as keyof typeof formData] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                           }`}
-                          placeholder={`Mobile Number ${index + 1} (Digits only: 0-9)`}
+                          placeholder={`Mobile Number ${index + 1}`}
                           disabled={isSubmitting}
                           pattern="[0-9]*"
                           inputMode="numeric"

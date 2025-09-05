@@ -371,8 +371,8 @@ export default function AllLeadsPage() {
           } else if (headerLower.includes('company')) {
             lead.company = valueStr;
           } else if (headerLower.includes('mobile') || headerLower.includes('phone')) {
-            // Only allow numeric characters in mobile numbers
-            const numericValue = valueStr.replace(/[^0-9]/g, '');
+            // Only allow numeric characters in mobile numbers, max 10 digits
+            const numericValue = valueStr.replace(/[^0-9]/g, '').slice(0, 10);
             
             if (headerLower.includes('2')) {
               // Mobile Number 2
