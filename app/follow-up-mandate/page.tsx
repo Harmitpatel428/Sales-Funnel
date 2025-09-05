@@ -495,6 +495,48 @@ export default function FollowUpMandatePage() {
                     </div>
                     <p className="text-sm font-medium text-gray-900">{selectedLead.discom || 'N/A'}</p>
                   </div>
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-xs font-medium text-gray-600">GIDC</label>
+                      <button
+                        onClick={() => copyToClipboard(selectedLead.gidc || 'N/A', 'gidc')}
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        title="Copy gidc"
+                      >
+                        {copiedField === 'gidc' ? (
+                          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-sm font-medium text-gray-900">{selectedLead.gidc || 'N/A'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-xs font-medium text-gray-600">GST Number</label>
+                      <button
+                        onClick={() => copyToClipboard(selectedLead.gstNumber || 'N/A', 'gstNumber')}
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        title="Copy gst number"
+                      >
+                        {copiedField === 'gstNumber' ? (
+                          <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-sm font-medium text-gray-900">{selectedLead.gstNumber || 'N/A'}</p>
+                  </div>
                   
                   {/* Dates */}
                   <div className="bg-gray-50 p-3 rounded-md">
@@ -580,6 +622,8 @@ Company: ${selectedLead.company}
 Consumer Number: ${selectedLead.consumerNumber || 'N/A'}
 KVA: ${selectedLead.kva}
 Discom: ${selectedLead.discom || 'N/A'}
+GIDC: ${selectedLead.gidc || 'N/A'}
+GST Number: ${selectedLead.gstNumber || 'N/A'}
 Phone: ${selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0 
   ? selectedLead.mobileNumbers.find(m => m.isMain)?.number || selectedLead.mobileNumbers[0]?.number || 'N/A'
   : selectedLead.mobileNumber || 'N/A'}
