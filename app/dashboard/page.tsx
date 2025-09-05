@@ -911,13 +911,14 @@ export default function DashboardPage() {
         // Check if this is in the format "number (name)" from export
         const match = trimmed.match(/^(.+?)\s*\((.+?)\)$/);
         if (match && match[1] && match[2]) {
-          const number = match[1].trim();
+          const number = match[1].trim().replace(/[^0-9]/g, ''); // Only keep numeric characters
           const name = match[2].trim();
           console.log('Parsed "' + trimmed + '" as number: "' + number + '", name: "' + name + '"');
           return { number, name };
         } else {
           console.log('Parsed "' + trimmed + '" as number only');
-          return { number: trimmed, name: '' };
+          const numericOnly = trimmed.replace(/[^0-9]/g, ''); // Only keep numeric characters
+          return { number: numericOnly, name: '' };
         }
       })
       .filter(Boolean)

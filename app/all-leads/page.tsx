@@ -371,20 +371,23 @@ export default function AllLeadsPage() {
           } else if (headerLower.includes('company')) {
             lead.company = valueStr;
           } else if (headerLower.includes('mobile') || headerLower.includes('phone')) {
+            // Only allow numeric characters in mobile numbers
+            const numericValue = valueStr.replace(/[^0-9]/g, '');
+            
             if (headerLower.includes('2')) {
               // Mobile Number 2
               if (!lead.mobileNumbers) lead.mobileNumbers = [];
               if (lead.mobileNumbers.length < 2) {
                 lead.mobileNumbers.push({
                   id: `mobile-${Date.now()}-${index}-2`,
-                  number: valueStr,
+                  number: numericValue,
                   name: '',
                   isMain: false
                 });
               } else if (lead.mobileNumbers[1]) {
                 lead.mobileNumbers[1] = { 
                   id: lead.mobileNumbers[1].id, 
-                  number: valueStr, 
+                  number: numericValue, 
                   name: lead.mobileNumbers[1].name, 
                   isMain: lead.mobileNumbers[1].isMain 
                 };
@@ -395,26 +398,26 @@ export default function AllLeadsPage() {
               if (lead.mobileNumbers.length < 3) {
                 lead.mobileNumbers.push({
                   id: `mobile-${Date.now()}-${index}-3`,
-                  number: valueStr,
+                  number: numericValue,
                   name: '',
                   isMain: false
                 });
               } else if (lead.mobileNumbers[2]) {
                 lead.mobileNumbers[2] = { 
                   id: lead.mobileNumbers[2].id, 
-                  number: valueStr, 
+                  number: numericValue, 
                   name: lead.mobileNumbers[2].name, 
                   isMain: lead.mobileNumbers[2].isMain 
                 };
               }
             } else {
               // Main mobile number
-              lead.mobileNumber = valueStr;
+              lead.mobileNumber = numericValue;
               if (!lead.mobileNumbers) lead.mobileNumbers = [];
               if (lead.mobileNumbers.length === 0) {
                 lead.mobileNumbers.push({
                   id: `mobile-${Date.now()}-${index}-1`,
-                  number: valueStr,
+                  number: numericValue,
                   name: '',
                   isMain: true
                 });

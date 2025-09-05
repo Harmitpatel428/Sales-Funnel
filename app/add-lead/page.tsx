@@ -209,12 +209,15 @@ export default function AddLeadPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle mobile number changes
+  // Handle mobile number changes - only allow numeric input
   const handleMobileNumberChange = (index: number, value: string) => {
+    // Only allow numeric characters (0-9) and common phone number separators
+    const numericValue = value.replace(/[^0-9]/g, '');
+    
     setFormData(prev => ({
       ...prev,
       mobileNumbers: prev.mobileNumbers.map((mobile, i) => 
-        i === index ? { ...mobile, number: value } : mobile
+        i === index ? { ...mobile, number: numericValue } : mobile
       )
     }));
 
@@ -719,14 +722,16 @@ export default function AddLeadPage() {
                       </div>
                       <div className="flex-1">
                         <input
-                          type="tel"
+                          type="text"
                           value={mobile.number}
                           onChange={(e) => handleMobileNumberChange(index, e.target.value)}
                           className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200 text-black ${
                             errors[`mobileNumber_${index}` as keyof typeof formData] ? 'border-red-500 bg-red-50' : 'border-gray-300'
                           }`}
-                          placeholder={`Mobile Number ${index + 1}`}
+                          placeholder={`Mobile Number ${index + 1} (Digits only: 0-9)`}
                           disabled={isSubmitting}
+                          pattern="[0-9]*"
+                          inputMode="numeric"
                         />
                       </div>
                       <button
