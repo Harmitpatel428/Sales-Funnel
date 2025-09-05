@@ -881,6 +881,19 @@ export default function DashboardPage() {
       case 'utility company':
         lead.discom = String(value);
         break;
+      case 'gidc':
+      case 'gidc number':
+      case 'gidc no':
+      case 'gidc no.':
+        lead.gidc = String(value);
+        break;
+      case 'gst number':
+      case 'gstnumber':
+      case 'gst no':
+      case 'gst no.':
+      case 'gst':
+        lead.gstNumber = String(value);
+        break;
     }
   };
 
@@ -1001,6 +1014,8 @@ export default function DashboardPage() {
       company: lead.company || '',
       clientName: lead.clientName || '',
       discom: lead.discom || '',
+      gidc: lead.gidc || '',
+      gstNumber: lead.gstNumber || '',
       mobileNumber: lead.mobileNumber || '', // Keep actual phone numbers, only set empty if truly missing
       mobileNumbers: lead.mobileNumbers || [{ id: '1', number: lead.mobileNumber || '', name: '', isMain: true }],
       companyLocation: lead.companyLocation || address,
@@ -1055,6 +1070,8 @@ export default function DashboardPage() {
           company: leadData.company || '',
           clientName: leadData.clientName || '',
           discom: leadData.discom || '',
+          gidc: leadData.gidc || '',
+          gstNumber: leadData.gstNumber || '',
           mobileNumber: mobileNumbers[0]?.number || '', // Keep for backward compatibility
           mobileNumbers: mobileNumbers as MobileNumber[],
           companyLocation: leadData.companyLocation || '',
@@ -1113,6 +1130,8 @@ export default function DashboardPage() {
         'Company Name', 
         'Client Name', 
         'Discom',
+        'GIDC',
+        'GST Number',
         'Main Mobile Number', 
         'Lead Status', 
         'Last Discussion', 
@@ -1144,6 +1163,8 @@ export default function DashboardPage() {
           lead.company || '',
           lead.clientName || '',
           lead.discom || '', // Discom
+          lead.gidc || '', // GIDC
+          lead.gstNumber || '', // GST Number
           mainMobileDisplay, // Main Mobile Number (with contact name if available)
           lead.status || 'New', // Lead Status
           lead.notes || '', // Last Discussion
@@ -2066,6 +2087,14 @@ export default function DashboardPage() {
                     <label className="block text-xs font-medium text-gray-600 mb-1">Discom</label>
                     <p className="text-sm font-medium text-gray-900">{selectedLead.discom || 'N/A'}</p>
                   </div>
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">GIDC</label>
+                    <p className="text-sm font-medium text-gray-900">{selectedLead.gidc || 'N/A'}</p>
+                  </div>
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <label className="block text-xs font-medium text-gray-600 mb-1">GST Number</label>
+                    <p className="text-sm font-medium text-gray-900">{selectedLead.gstNumber || 'N/A'}</p>
+                  </div>
                   
                   {/* Dates */}
                   <div className="bg-gray-50 p-3 rounded-md">
@@ -2150,6 +2179,8 @@ Company: ${selectedLead.company}
 Consumer Number: ${selectedLead.consumerNumber || 'N/A'}
 KVA: ${selectedLead.kva}
 Discom: ${selectedLead.discom || 'N/A'}
+GIDC: ${selectedLead.gidc || 'N/A'}
+GST Number: ${selectedLead.gstNumber || 'N/A'}
 Phone: ${selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0 
   ? selectedLead.mobileNumbers.find(m => m.isMain)?.number || selectedLead.mobileNumbers[0]?.number || 'N/A'
   : selectedLead.mobileNumber || 'N/A'}

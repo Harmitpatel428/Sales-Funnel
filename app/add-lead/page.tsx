@@ -19,6 +19,8 @@ export default function AddLeadPage() {
     company: '',
     clientName: '',
     discom: '',
+    gidc: '',
+    gstNumber: '',
     mobileNumber: '', // Keep for backward compatibility
     mobileNumbers: [
       { id: '1', number: '', name: '', isMain: true },
@@ -117,6 +119,8 @@ export default function AddLeadPage() {
             company: leadData.company || '',
             clientName: leadData.clientName || '',
             discom: leadData.discom || '',
+            gidc: leadData.gidc || '',
+            gstNumber: leadData.gstNumber || '',
             mobileNumber: leadData.mobileNumber || '', // Keep for backward compatibility
             mobileNumbers: mobileNumbers,
             companyLocation: leadData.companyLocation || address, // Use existing or extracted address
@@ -376,6 +380,8 @@ export default function AddLeadPage() {
           company: formData.company,
           clientName: formData.clientName,
           discom: formData.discom,
+          gidc: formData.gidc,
+          gstNumber: formData.gstNumber,
           mobileNumber: mainMobileNumber, // Keep for backward compatibility
           mobileNumbers: formData.mobileNumbers,
           companyLocation: formData.companyLocation,
@@ -446,6 +452,8 @@ export default function AddLeadPage() {
           company: formData.company,
           clientName: formData.clientName,
           discom: formData.discom,
+          gidc: formData.gidc,
+          gstNumber: formData.gstNumber,
           mobileNumber: mainMobileNumber, // Keep for backward compatibility
           mobileNumbers: updatedMobileNumbers,
           companyLocation: formData.companyLocation,
@@ -482,6 +490,8 @@ export default function AddLeadPage() {
           company: '',
           clientName: '',
           discom: '',
+          gidc: '',
+          gstNumber: '',
           mobileNumber: '', // Keep for backward compatibility
           mobileNumbers: [
             { id: '1', number: '', name: '', isMain: true },
@@ -735,6 +745,38 @@ export default function AddLeadPage() {
                 <option value="DGVCL">DGVCL</option>
                 <option value="PGVCL">PGVCL</option>
               </select>
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="gidc" className="block text-sm font-medium text-gray-700">
+                GIDC
+              </label>
+              <input
+                type="text"
+                id="gidc"
+                name="gidc"
+                value={formData.gidc || ''}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200 text-black"
+                placeholder="Enter GIDC"
+                disabled={isSubmitting}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="gstNumber" className="block text-sm font-medium text-gray-700">
+                GST Number
+              </label>
+              <input
+                type="text"
+                id="gstNumber"
+                name="gstNumber"
+                value={formData.gstNumber || ''}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200 text-black"
+                placeholder="Enter GST Number"
+                disabled={isSubmitting}
+              />
             </div>
             
             {/* Mobile Numbers Section */}

@@ -17,6 +17,8 @@ export interface Lead {
   company: string;
   clientName: string;
   discom?: string;
+  gidc?: string; // New field for GIDC
+  gstNumber?: string; // New field for GST Number
   mobileNumbers: MobileNumber[]; // Updated to support multiple mobile numbers
   mobileNumber: string; // Keep for backward compatibility
   companyLocation?: string; // New field for company location
