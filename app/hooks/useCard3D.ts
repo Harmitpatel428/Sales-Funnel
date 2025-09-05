@@ -15,8 +15,6 @@ export const useCard3D = () => {
 
     let mouseX = 0;
     let mouseY = 0;
-    let cardX = 0;
-    let cardY = 0;
     let blobX = 0;
     let blobY = 0;
 
