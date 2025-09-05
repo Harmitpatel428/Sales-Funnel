@@ -33,8 +33,8 @@ export default function DashboardPage() {
 
   // Create a stable reference for activeFilters to prevent infinite loops
   const activeFiltersKey = useMemo(() => {
-    return `${activeFilters.status?.join(',') || 'none'}-${activeFilters.searchTerm || 'none'}`;
-  }, [activeFilters.status, activeFilters.searchTerm]);
+    return `${activeFilters.status?.join(',') || 'none'}-${activeFilters.searchTerm || 'none'}-${activeFilters.discom || 'none'}`;
+  }, [activeFilters.status, activeFilters.searchTerm, activeFilters.discom]);
 
   // Show toast notification
   const showToastNotification = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
@@ -922,6 +922,7 @@ export default function DashboardPage() {
           consumerNumber: leadData.consumerNumber || '',
           company: leadData.company || '',
           clientName: leadData.clientName || '',
+          discom: leadData.discom || '',
           mobileNumber: mobileNumbers[0]?.number || '', // Keep for backward compatibility
           mobileNumbers: mobileNumbers as MobileNumber[],
           companyLocation: leadData.companyLocation || '',
