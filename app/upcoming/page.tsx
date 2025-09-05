@@ -696,6 +696,9 @@ GST Number: ${selectedLead.gstNumber || 'N/A'}
 Phone: ${selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0 
   ? selectedLead.mobileNumbers.find(m => m.isMain)?.number || selectedLead.mobileNumbers[0]?.number || 'N/A'
   : selectedLead.mobileNumber || 'N/A'}
+Contact Name: ${selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 0 
+  ? selectedLead.mobileNumbers.find(m => m.isMain)?.name || selectedLead.clientName || 'N/A'
+  : selectedLead.clientName || 'N/A'}
 Status: ${selectedLead.status}
 Unit Type: ${selectedLead.unitType}
 Connection Date: ${formatDateToDDMMYYYY(selectedLead.connectionDate)}
