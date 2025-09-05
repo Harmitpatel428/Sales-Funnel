@@ -178,7 +178,7 @@ export default function UpcomingPage() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-White-800">Upcoming Follow-ups</h1>
-          <p className="text-gray-600 mt-2">Manage leads with upcoming follow-ups in the next 7 days</p>
+          <p className="text-white mt-2">Manage leads with upcoming follow-ups in the next 7 days</p>
         </div>
         <button 
           onClick={() => router.push('/dashboard')}

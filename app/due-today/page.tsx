@@ -185,7 +185,7 @@ export default function DueTodayPage() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-White-800">Due Today & Overdue Follow-ups</h1>
-          <p className="text-gray-600 mt-2">Manage leads with follow-ups due today or overdue</p>
+          <p className="text-white mt-2">Manage leads with follow-ups due today or overdue</p>
         </div>
         <button 
           onClick={() => router.push('/dashboard')}

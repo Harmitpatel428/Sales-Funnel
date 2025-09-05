@@ -144,7 +144,7 @@ export default function FollowUpMandatePage() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-White-800">Follow-up Mandate & Documentation</h1>
-          <p className="text-gray-600 mt-2">Manage mandate status and document tracking</p>
+          <p className="text-white mt-2">Manage mandate status and document tracking</p>
         </div>
         <button 
           onClick={() => router.push('/dashboard')}
