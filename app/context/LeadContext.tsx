@@ -271,6 +271,7 @@ export function LeadProvider({ children }: { children: ReactNode }) {
           ...allMobileNames,
           lead.consumerNumber,
           lead.kva,
+          lead.discom,
           lead.companyLocation,
           lead.notes,
           lead.finalConclusion

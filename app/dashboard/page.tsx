@@ -868,6 +868,7 @@ export default function DashboardPage() {
       consumerNumber: lead.consumerNumber || '',
       company: lead.company || '',
       clientName: lead.clientName || '',
+      discom: lead.discom || '',
       mobileNumber: lead.mobileNumber || '', // Keep actual phone numbers, only set empty if truly missing
       mobileNumbers: lead.mobileNumbers || [{ id: '1', number: lead.mobileNumber || '', name: '', isMain: true }],
       companyLocation: lead.companyLocation || address,
