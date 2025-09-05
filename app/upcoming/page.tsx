@@ -439,11 +439,15 @@ export default function UpcomingPage() {
                     <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                       selectedLead.status === 'New' ? 'bg-blue-100 text-blue-800' :
-                      selectedLead.status === 'Contacted' ? 'bg-purple-100 text-purple-800' :
-                      selectedLead.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' :
+                      selectedLead.status === 'CNR' ? 'bg-purple-100 text-purple-800' :
+                      selectedLead.status === 'Busy' ? 'bg-yellow-100 text-yellow-800' :
                       selectedLead.status === 'Follow-up' ? 'bg-orange-100 text-orange-800' :
-                      selectedLead.status === 'Closed - Won' ? 'bg-green-100 text-green-800' :
-                      'bg-red-100 text-red-800'
+                      selectedLead.status === 'Deal Close' ? 'bg-green-100 text-green-800' :
+                      selectedLead.status === 'Work Alloted' ? 'bg-indigo-100 text-indigo-800' :
+                      selectedLead.status === 'Hotlead' ? 'bg-red-100 text-red-800' :
+                      selectedLead.status === 'Mandate Sent' ? 'bg-pink-100 text-pink-800' :
+                      selectedLead.status === 'Documentation' ? 'bg-teal-100 text-teal-800' :
+                      'bg-gray-100 text-gray-800'
                     }`}>
                       {selectedLead.status}
                     </span>
