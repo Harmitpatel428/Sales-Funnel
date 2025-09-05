@@ -1071,13 +1071,13 @@ export default function AllLeadsPage() {
                 </div>
 
                 {/* Additional Numbers */}
-                {selectedLead.mobileNumbers && selectedLead.mobileNumbers.length > 1 && (
+                {selectedLead.mobileNumbers && selectedLead.mobileNumbers.filter(m => !m.isMain && m.number.trim()).length > 0 && (
                   <div className="bg-gray-50 p-3 rounded-md">
                     <label className="block text-xs font-medium text-gray-600 mb-2">Additional Numbers</label>
                     <div className="flex flex-wrap gap-2">
-                      {selectedLead.mobileNumbers.filter(m => !m.isMain).map((mobile, index) => (
+                      {selectedLead.mobileNumbers.filter(m => !m.isMain && m.number.trim()).map((mobile, index) => (
                         <span key={index} className="text-sm font-medium text-gray-900 bg-white px-2 py-1 rounded border">
-                          {mobile.name}: {mobile.number}
+                          {mobile.name ? `${mobile.name}: ${mobile.number}` : mobile.number}
                         </span>
                       ))}
                     </div>
