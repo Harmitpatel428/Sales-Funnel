@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Export configuration for Electron
+  output: 'export',
+  trailingSlash: true,
+  
   // Performance optimizations
   experimental: {
     optimizePackageImports: ['framer-motion', 'lucide-react', 'recharts'],
@@ -8,6 +12,7 @@ const nextConfig: NextConfig = {
   
   // Image optimization
   images: {
+    unoptimized: true,
     formats: ['image/webp', 'image/avif'],
     minimumCacheTTL: 60,
   },
