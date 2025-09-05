@@ -121,6 +121,7 @@ export default function HomePage() {
           </button>
         </div>
 
+
         {/* Quick Actions */}
         <div className="bg-gray-900 rounded-lg shadow-lg p-8 border border-gray-700">
           <h2 className="text-2xl font-bold text-white mb-6 text-center">Quick Actions</h2>
