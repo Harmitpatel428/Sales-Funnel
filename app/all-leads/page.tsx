@@ -33,6 +33,10 @@ export default function AllLeadsPage() {
   const [bulkDeletePassword, setBulkDeletePassword] = useState('');
   const [bulkDeleteError, setBulkDeleteError] = useState('');
   
+  // Toast notification states
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'info'>('info');
   
   // Password for deletion (stored in localStorage)
   const [DELETE_PASSWORD, setDELETE_PASSWORD] = useState(() => {
@@ -366,28 +370,92 @@ export default function AllLeadsPage() {
             lead.clientName = valueStr;
           } else if (headerLower.includes('company')) {
             lead.company = valueStr;
-          } else if (headerLower.includes('mobile') || headerLower.includes('phone') || headerLower.includes('contact')) {
-            if (headerLower.includes('2') || headerLower.includes('3')) {
-              // Additional mobile numbers
+          } else if (headerLower.includes('mobile') || headerLower.includes('phone')) {
+            if (headerLower.includes('2')) {
+              // Mobile Number 2
               if (!lead.mobileNumbers) lead.mobileNumbers = [];
-              const isMain = lead.mobileNumbers.length === 0;
-              lead.mobileNumbers.push({
-                id: `mobile-${Date.now()}-${index}`,
-                number: valueStr,
-                name: '',
-                isMain: isMain
-              });
+              if (lead.mobileNumbers.length < 2) {
+                lead.mobileNumbers.push({
+                  id: `mobile-${Date.now()}-${index}-2`,
+                  number: valueStr,
+                  name: '',
+                  isMain: false
+                });
+              } else if (lead.mobileNumbers[1]) {
+                lead.mobileNumbers[1] = { 
+                  id: lead.mobileNumbers[1].id, 
+                  number: valueStr, 
+                  name: lead.mobileNumbers[1].name, 
+                  isMain: lead.mobileNumbers[1].isMain 
+                };
+              }
+            } else if (headerLower.includes('3')) {
+              // Mobile Number 3
+              if (!lead.mobileNumbers) lead.mobileNumbers = [];
+              if (lead.mobileNumbers.length < 3) {
+                lead.mobileNumbers.push({
+                  id: `mobile-${Date.now()}-${index}-3`,
+                  number: valueStr,
+                  name: '',
+                  isMain: false
+                });
+              } else if (lead.mobileNumbers[2]) {
+                lead.mobileNumbers[2] = { 
+                  id: lead.mobileNumbers[2].id, 
+                  number: valueStr, 
+                  name: lead.mobileNumbers[2].name, 
+                  isMain: lead.mobileNumbers[2].isMain 
+                };
+              }
             } else {
               // Main mobile number
               lead.mobileNumber = valueStr;
               if (!lead.mobileNumbers) lead.mobileNumbers = [];
               if (lead.mobileNumbers.length === 0) {
                 lead.mobileNumbers.push({
-                  id: `mobile-${Date.now()}-${index}`,
+                  id: `mobile-${Date.now()}-${index}-1`,
                   number: valueStr,
                   name: '',
                   isMain: true
                 });
+              }
+            }
+          } else if (headerLower.includes('contact') && headerLower.includes('name')) {
+            if (headerLower.includes('2')) {
+              // Contact Name 2
+              if (!lead.mobileNumbers) lead.mobileNumbers = [];
+              if (lead.mobileNumbers.length < 2) {
+                lead.mobileNumbers.push({
+                  id: `mobile-${Date.now()}-${index}-2`,
+                  number: '',
+                  name: valueStr,
+                  isMain: false
+                });
+              } else if (lead.mobileNumbers[1]) {
+                lead.mobileNumbers[1] = { 
+                  id: lead.mobileNumbers[1].id, 
+                  number: lead.mobileNumbers[1].number, 
+                  name: valueStr, 
+                  isMain: lead.mobileNumbers[1].isMain 
+                };
+              }
+            } else if (headerLower.includes('3')) {
+              // Contact Name 3
+              if (!lead.mobileNumbers) lead.mobileNumbers = [];
+              if (lead.mobileNumbers.length < 3) {
+                lead.mobileNumbers.push({
+                  id: `mobile-${Date.now()}-${index}-3`,
+                  number: '',
+                  name: valueStr,
+                  isMain: false
+                });
+              } else if (lead.mobileNumbers[2]) {
+                lead.mobileNumbers[2] = { 
+                  id: lead.mobileNumbers[2].id, 
+                  number: lead.mobileNumbers[2].number, 
+                  name: valueStr, 
+                  isMain: lead.mobileNumbers[2].isMain 
+                };
               }
             }
           } else if (headerLower.includes('consumer') || headerLower.includes('con.no')) {
@@ -449,77 +517,85 @@ export default function AllLeadsPage() {
   };
 
   // Export function (copied from dashboard)
-  const handleExportCSV = () => {
-    // Get filtered leads
-    const leadsToExport = allLeads;
-    
-    // Define CSV headers with remapped column names for export
-    const headers = [
-      'con.no', 
-      'KVA', 
-      'Connection Date', 
-      'Company Name', 
-      'Client Name', 
-      'Discom',
-      'Main Mobile Number', 
-      'Lead Status', 
-      'Last Discussion', 
-      'Address',
-      'Next Follow-up Date',
-      'Mobile Number 2', 
-      'Contact Name 2', 
-      'Mobile Number 3', 
-      'Contact Name 3'
-    ];
-    
-    // Convert leads to CSV rows with remapped data
-    const rows = leadsToExport.map(lead => {
-      // Get mobile numbers and contacts
-      const mobileNumbers = lead.mobileNumbers || [];
-      const mainMobile = mobileNumbers.find(m => m.isMain) || mobileNumbers[0] || { number: lead.mobileNumber || '', name: '' };
-      const mobile2 = mobileNumbers[1] || { number: '', name: '' };
-      const mobile3 = mobileNumbers[2] || { number: '', name: '' };
+  const handleExportExcel = async () => {
+    try {
+      // Dynamic import to avoid turbopack issues
+      const XLSX = await import('xlsx');
       
-      // Format main mobile number with contact name if available
-      const mainMobileDisplay = mainMobile.name 
-        ? `${mainMobile.number} (${mainMobile.name})` 
-        : mainMobile.number || '';
+      // Get filtered leads
+      const leadsToExport = allLeads;
       
-      return [
-        lead.consumerNumber || '',
-        lead.kva || '',
-        lead.connectionDate && lead.connectionDate.trim() !== '' ? lead.connectionDate : '',
-        lead.company || '',
-        lead.clientName || '',
-        lead.discom || '', // Discom
-        mainMobileDisplay, // Main Mobile Number (with contact name if available)
-        lead.status || 'New', // Lead Status
-        lead.notes || '', // Last Discussion
-        lead.companyLocation || (lead.notes && lead.notes.includes('Address:') ? lead.notes.split('Address:')[1]?.trim() || '' : ''), // Address
-        lead.followUpDate || '', // Next Follow-up Date
-        mobile2.number || '', // Mobile Number 2
-        mobile2.name || '', // Contact Name 2
-        mobile3.number || '', // Mobile Number 3
-        mobile3.name || '' // Contact Name 3
+      // Define Excel headers with remapped column names for export
+      const headers = [
+        'con.no', 
+        'KVA', 
+        'Connection Date', 
+        'Company Name', 
+        'Client Name', 
+        'Discom',
+        'Main Mobile Number', 
+        'Lead Status', 
+        'Last Discussion', 
+        'Address',
+        'Next Follow-up Date',
+        'Mobile Number 2', 
+        'Contact Name 2', 
+        'Mobile Number 3', 
+        'Contact Name 3'
       ];
-    });
-    
-    // Combine headers and rows
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-    ].join('\n');
-    
-    // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `leads-export-all-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      
+      // Convert leads to Excel rows with remapped data
+      const rows = leadsToExport.map(lead => {
+        // Get mobile numbers and contacts
+        const mobileNumbers = lead.mobileNumbers || [];
+        const mainMobile = mobileNumbers.find(m => m.isMain) || mobileNumbers[0] || { number: lead.mobileNumber || '', name: '' };
+        const mobile2 = mobileNumbers[1] || { number: '', name: '' };
+        const mobile3 = mobileNumbers[2] || { number: '', name: '' };
+        
+        // Format main mobile number with contact name if available
+        const mainMobileDisplay = mainMobile.name 
+          ? `${mainMobile.number} (${mainMobile.name})` 
+          : mainMobile.number || '';
+        
+        return [
+          lead.consumerNumber || '',
+          lead.kva || '',
+          lead.connectionDate && lead.connectionDate.trim() !== '' ? lead.connectionDate : '',
+          lead.company || '',
+          lead.clientName || '',
+          lead.discom || '', // Discom
+          mainMobileDisplay, // Main Mobile Number (with contact name if available)
+          lead.status || 'New', // Lead Status
+          lead.notes || '', // Last Discussion
+          lead.companyLocation || (lead.notes && lead.notes.includes('Address:') ? lead.notes.split('Address:')[1]?.trim() || '' : ''), // Address
+          lead.followUpDate || '', // Next Follow-up Date
+          mobile2.number || '', // Mobile Number 2
+          mobile2.name || '', // Contact Name 2
+          mobile3.number || '', // Mobile Number 3
+          mobile3.name || '' // Contact Name 3
+        ];
+      });
+      
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+      
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, 'Leads');
+      
+      // Generate Excel file and download
+      XLSX.writeFile(wb, `leads-export-all-${new Date().toISOString().split('T')[0]}.xlsx`);
+      
+      // Show success notification
+      setShowToast(true);
+      setToastMessage(`Successfully exported ${leadsToExport.length} leads to Excel format`);
+      setToastType('success');
+    } catch (error) {
+      console.error('Export error:', error);
+      setShowToast(true);
+      setToastMessage('Failed to export leads. Please try again.');
+      setToastType('error');
+    }
   };
 
   // Action buttons for the table
@@ -656,7 +732,7 @@ export default function AllLeadsPage() {
             
             {/* Export Button */}
             <button
-              onClick={handleExportCSV}
+              onClick={handleExportExcel}
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl flex items-center space-x-2 font-semibold transition-colors shadow-lg"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

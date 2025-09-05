@@ -579,11 +579,88 @@ export default function DashboardPage() {
       case 'phone number':
       case 'contact phone':
       case 'telephone':
+      case 'main mobile number':
         console.log('*** MOBILE NUMBER MAPPING ***');
         console.log('Setting mobileNumber to: "' + String(value) + '"');
         console.log('Original value: "' + value + '" (type: ' + typeof value + ')');
         lead.mobileNumber = String(value);
         console.log('Lead mobileNumber after setting: "' + lead.mobileNumber + '"');
+        break;
+      case 'mobile number 2':
+      case 'mobile number2':
+      case 'mobile2':
+      case 'phone 2':
+      case 'phone2':
+        console.log('*** MOBILE NUMBER 2 MAPPING ***');
+        console.log('Setting mobileNumber2 to: "' + String(value) + '"');
+        if (!lead.mobileNumbers) lead.mobileNumbers = [];
+        if (lead.mobileNumbers.length < 2) {
+          lead.mobileNumbers.push({ id: '2', number: String(value), name: '', isMain: false });
+        } else if (lead.mobileNumbers[1]) {
+          lead.mobileNumbers[1] = { 
+            id: lead.mobileNumbers[1].id, 
+            number: String(value), 
+            name: lead.mobileNumbers[1].name, 
+            isMain: lead.mobileNumbers[1].isMain 
+          };
+        }
+        break;
+      case 'contact name 2':
+      case 'contact name2':
+      case 'contact2':
+      case 'name 2':
+      case 'name2':
+        console.log('*** CONTACT NAME 2 MAPPING ***');
+        console.log('Setting contactName2 to: "' + String(value) + '"');
+        if (!lead.mobileNumbers) lead.mobileNumbers = [];
+        if (lead.mobileNumbers.length < 2) {
+          lead.mobileNumbers.push({ id: '2', number: '', name: String(value), isMain: false });
+        } else if (lead.mobileNumbers[1]) {
+          lead.mobileNumbers[1] = { 
+            id: lead.mobileNumbers[1].id, 
+            number: lead.mobileNumbers[1].number, 
+            name: String(value), 
+            isMain: lead.mobileNumbers[1].isMain 
+          };
+        }
+        break;
+      case 'mobile number 3':
+      case 'mobile number3':
+      case 'mobile3':
+      case 'phone 3':
+      case 'phone3':
+        console.log('*** MOBILE NUMBER 3 MAPPING ***');
+        console.log('Setting mobileNumber3 to: "' + String(value) + '"');
+        if (!lead.mobileNumbers) lead.mobileNumbers = [];
+        if (lead.mobileNumbers.length < 3) {
+          lead.mobileNumbers.push({ id: '3', number: String(value), name: '', isMain: false });
+        } else if (lead.mobileNumbers[2]) {
+          lead.mobileNumbers[2] = { 
+            id: lead.mobileNumbers[2].id, 
+            number: String(value), 
+            name: lead.mobileNumbers[2].name, 
+            isMain: lead.mobileNumbers[2].isMain 
+          };
+        }
+        break;
+      case 'contact name 3':
+      case 'contact name3':
+      case 'contact3':
+      case 'name 3':
+      case 'name3':
+        console.log('*** CONTACT NAME 3 MAPPING ***');
+        console.log('Setting contactName3 to: "' + String(value) + '"');
+        if (!lead.mobileNumbers) lead.mobileNumbers = [];
+        if (lead.mobileNumbers.length < 3) {
+          lead.mobileNumbers.push({ id: '3', number: '', name: String(value), isMain: false });
+        } else if (lead.mobileNumbers[2]) {
+          lead.mobileNumbers[2] = { 
+            id: lead.mobileNumbers[2].id, 
+            number: lead.mobileNumbers[2].number, 
+            name: String(value), 
+            isMain: lead.mobileNumbers[2].isMain 
+          };
+        }
         break;
       case 'old //new':
       case 'old/new':
@@ -826,22 +903,48 @@ export default function DashboardPage() {
     const rawNumbers = cleanString.split(separators);
     console.log('Raw split result:', rawNumbers);
     
-    const numbers = rawNumbers
-      .map(num => num.trim())
-      .filter(num => {
-        const hasDigits = /\d/.test(num);
-        console.log('Checking "' + num + '": hasDigits=' + hasDigits);
-        return num.length > 0 && hasDigits;
+    const parsedNumbers = rawNumbers
+      .map(num => {
+        const trimmed = num.trim();
+        if (!trimmed || !/\d/.test(trimmed)) return null;
+        
+        // Check if this is in the format "number (name)" from export
+        const match = trimmed.match(/^(.+?)\s*\((.+?)\)$/);
+        if (match && match[1] && match[2]) {
+          const number = match[1].trim();
+          const name = match[2].trim();
+          console.log('Parsed "' + trimmed + '" as number: "' + number + '", name: "' + name + '"');
+          return { number, name };
+        } else {
+          console.log('Parsed "' + trimmed + '" as number only');
+          return { number: trimmed, name: '' };
+        }
       })
+      .filter(Boolean)
       .slice(0, 3); // Limit to 3 numbers maximum
 
-    console.log('Filtered numbers:', numbers);
+    console.log('Parsed numbers:', parsedNumbers);
 
-    // Create mobile numbers array with auto-populated contact name ONLY for the first number
+    // Create mobile numbers array with proper names
     const mobileNumbers = [
-      { id: '1', number: numbers[0] || '', name: numbers[0] ? clientName : '', isMain: true },
-      { id: '2', number: numbers[1] || '', name: '', isMain: false },
-      { id: '3', number: numbers[2] || '', name: '', isMain: false }
+      { 
+        id: '1', 
+        number: parsedNumbers[0]?.number || '', 
+        name: parsedNumbers[0]?.name || (parsedNumbers[0]?.number ? clientName : ''), 
+        isMain: true 
+      },
+      { 
+        id: '2', 
+        number: parsedNumbers[1]?.number || '', 
+        name: parsedNumbers[1]?.name || '', 
+        isMain: false 
+      },
+      { 
+        id: '3', 
+        number: parsedNumbers[2]?.number || '', 
+        name: parsedNumbers[2]?.name || '', 
+        isMain: false 
+      }
     ];
 
     console.log('Final mobile numbers array:', mobileNumbers);
@@ -964,77 +1067,81 @@ export default function DashboardPage() {
     return importedCount;
   };
   
-  // Export to CSV
-  const handleExportCSV = () => {
-    // Get filtered leads based on current view
-    const leadsToExport = getFilteredLeads(activeFilters);
-    
-    // Define CSV headers with remapped column names for export
-    const headers = [
-      'con.no', 
-      'KVA', 
-      'Connection Date', 
-      'Company Name', 
-      'Client Name', 
-      'Discom',
-      'Main Mobile Number', 
-      'Lead Status', 
-      'Last Discussion', 
-      'Address',
-      'Next Follow-up Date',
-      'Mobile Number 2', 
-      'Contact Name 2', 
-      'Mobile Number 3', 
-      'Contact Name 3'
-    ];
-    
-    // Convert leads to CSV rows with remapped data
-    const rows = leadsToExport.map(lead => {
-      // Get mobile numbers and contacts
-      const mobileNumbers = lead.mobileNumbers || [];
-      const mainMobile = mobileNumbers.find(m => m.isMain) || mobileNumbers[0] || { number: lead.mobileNumber || '', name: '' };
-      const mobile2 = mobileNumbers[1] || { number: '', name: '' };
-      const mobile3 = mobileNumbers[2] || { number: '', name: '' };
+  // Export to Excel
+  const handleExportExcel = async () => {
+    try {
+      // Dynamic import to avoid turbopack issues
+      const XLSX = await import('xlsx');
       
-      // Format main mobile number with contact name if available
-      const mainMobileDisplay = mainMobile.name 
-        ? `${mainMobile.number} (${mainMobile.name})` 
-        : mainMobile.number || '';
+      // Get filtered leads based on current view
+      const leadsToExport = getFilteredLeads(activeFilters);
       
-      return [
-        lead.consumerNumber || '',
-        lead.kva || '',
-        lead.connectionDate && lead.connectionDate.trim() !== '' ? lead.connectionDate : '',
-        lead.company || '',
-        lead.clientName || '',
-        lead.discom || '', // Discom
-        mainMobileDisplay, // Main Mobile Number (with contact name if available)
-        lead.status || 'New', // Lead Status
-        lead.notes || '', // Last Discussion
-        lead.companyLocation || (lead.notes && lead.notes.includes('Address:') ? lead.notes.split('Address:')[1]?.trim() || '' : ''), // Address
-        lead.followUpDate || '', // Next Follow-up Date
-        mobile2.number || '', // Mobile Number 2
-        mobile2.name || '', // Contact Name 2
-        mobile3.number || '', // Mobile Number 3
-        mobile3.name || '' // Contact Name 3
+      // Define Excel headers with remapped column names for export
+      const headers = [
+        'con.no', 
+        'KVA', 
+        'Connection Date', 
+        'Company Name', 
+        'Client Name', 
+        'Discom',
+        'Main Mobile Number', 
+        'Lead Status', 
+        'Last Discussion', 
+        'Address',
+        'Next Follow-up Date',
+        'Mobile Number 2', 
+        'Contact Name 2', 
+        'Mobile Number 3', 
+        'Contact Name 3'
       ];
-    });
-    
-    // Combine headers and rows
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-    ].join('\n');
-    
-    // Create download link
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `leads-export-${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      
+      // Convert leads to Excel rows with remapped data
+      const rows = leadsToExport.map(lead => {
+        // Get mobile numbers and contacts
+        const mobileNumbers = lead.mobileNumbers || [];
+        const mainMobile = mobileNumbers.find(m => m.isMain) || mobileNumbers[0] || { number: lead.mobileNumber || '', name: '' };
+        const mobile2 = mobileNumbers[1] || { number: '', name: '' };
+        const mobile3 = mobileNumbers[2] || { number: '', name: '' };
+        
+        // Format main mobile number with contact name if available
+        const mainMobileDisplay = mainMobile.name 
+          ? `${mainMobile.number} (${mainMobile.name})` 
+          : mainMobile.number || '';
+        
+        return [
+          lead.consumerNumber || '',
+          lead.kva || '',
+          lead.connectionDate && lead.connectionDate.trim() !== '' ? lead.connectionDate : '',
+          lead.company || '',
+          lead.clientName || '',
+          lead.discom || '', // Discom
+          mainMobileDisplay, // Main Mobile Number (with contact name if available)
+          lead.status || 'New', // Lead Status
+          lead.notes || '', // Last Discussion
+          lead.companyLocation || (lead.notes && lead.notes.includes('Address:') ? lead.notes.split('Address:')[1]?.trim() || '' : ''), // Address
+          lead.followUpDate || '', // Next Follow-up Date
+          mobile2.number || '', // Mobile Number 2
+          mobile2.name || '', // Contact Name 2
+          mobile3.number || '', // Mobile Number 3
+          mobile3.name || '' // Contact Name 3
+        ];
+      });
+      
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+      
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, 'Leads');
+      
+      // Generate Excel file and download
+      XLSX.writeFile(wb, `leads-export-${new Date().toISOString().split('T')[0]}.xlsx`);
+      
+      showToastNotification(`Successfully exported ${leadsToExport.length} leads to Excel format`, 'success');
+    } catch (error) {
+      console.error('Export error:', error);
+      showToastNotification('Failed to export leads. Please try again.', 'error');
+    }
   };
 
   // Search functionality
@@ -1343,7 +1450,7 @@ export default function DashboardPage() {
           
           {/* Export Button */}
           <button
-            onClick={handleExportCSV}
+            onClick={handleExportExcel}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors flex items-center space-x-2"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
