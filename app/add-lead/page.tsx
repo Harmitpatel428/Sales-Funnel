@@ -255,6 +255,33 @@ export default function AddLeadPage() {
     }));
   };
 
+  // Handle connection date changes with auto-formatting
+  const handleConnectionDateChange = (e: ChangeEvent<HTMLInputElement>): void => {
+    let value = e.target.value.replace(/[^0-9]/g, ''); // Remove non-numeric characters
+    
+    // Auto-format with dashes
+    if (value.length >= 2) {
+      value = value.slice(0, 2) + '-' + value.slice(2);
+    }
+    if (value.length >= 5) {
+      value = value.slice(0, 5) + '-' + value.slice(5, 9);
+    }
+    
+    setFormData(prev => ({
+      ...prev,
+      connectionDate: value
+    }));
+
+    // Clear error for this field
+    if (errors.connectionDate) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.connectionDate;
+        return newErrors;
+      });
+    }
+  };
+
   // Handle input changes
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -586,12 +613,13 @@ export default function AddLeadPage() {
                 id="connectionDate"
                 name="connectionDate"
                 value={formData.connectionDate}
-                onChange={handleChange}
+                onChange={handleConnectionDateChange}
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors duration-200 text-black ${
                   errors.connectionDate ? 'border-red-500 bg-red-50' : 'border-gray-300'
                 }`}
-                placeholder="DD-MM-YYYY (e.g., 00-00-0000)"
+                placeholder="DD-MM-YYYY"
                 disabled={isSubmitting}
+                maxLength={10}
               />
               {errors.connectionDate && (
                 <p className="text-sm text-red-600 flex items-center">
