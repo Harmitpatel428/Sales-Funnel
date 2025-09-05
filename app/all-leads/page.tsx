@@ -46,6 +46,30 @@ export default function AllLeadsPage() {
     return 'admin123';
   });
 
+  // Helper function to format date to DD-MM-YYYY
+  const formatDateToDDMMYYYY = (dateString: string): string => {
+    if (!dateString) return '';
+    
+    // If already in DD-MM-YYYY format, return as is
+    if (dateString.match(/^\d{2}-\d{2}-\d{4}$/)) {
+      return dateString;
+    }
+    
+    // If it's a Date object or ISO string, convert to DD-MM-YYYY
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return dateString; // Return original if invalid
+      
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      
+      return `${day}-${month}-${year}`;
+    } catch {
+      return dateString; // Return original if conversion fails
+    }
+  };
+
   // Filter leads based on status and search term
   const allLeads = useMemo(() => {
     let filtered = leads; // Show all leads regardless of status or deletion status
